@@ -3,6 +3,10 @@
 	- IGS antenna calibration file (igsXX.atx) where XX is 14 or 20
 	- Ocean Loading model (.BLQ)
 	- Troposphere model (GPT 2.5)
+
+	TODO: Could these dependencies be bundled up in the Docker image?
+	It makes the initial pull bigger, but if they're needed for Ginan
+	to work it might make sense
 """
 import logging
 from pathlib import Path
