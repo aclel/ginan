@@ -1,0 +1,13 @@
+FROM python:3.11-slim-bullseye
+
+WORKDIR /app
+
+RUN apt update -y && apt install git -y
+
+COPY scripts .
+
+RUN pip install -r requirements.txt
+
+EXPOSE 5000
+
+CMD ["python", "ginan-api/app.py"]
