@@ -1,0 +1,47 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: ginan-api
+  namespace: argo
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: ginan-api
+  template:
+    metadata:
+      labels:
+        app: ginan-api
+    spec:
+      volumes:
+      - name: ginan-data
+        hostPath:
+          path: /home/ginan-data
+      containers:
+      - name: ginan-api
+        image: ginan-api:latest
+        imagePullPolicy: Never
+        resources:
+          limits:
+            memory: "128Mi"
+            cpu: "500m"
+        ports:
+        - containerPort: 5000
+        volumeMounts:
+        - name: ginan-data
+          mountPath: /var
+
+# ---
+# TODO: This doesn't expose the api successfully
+# apiVersion: v1
+# kind: Service
+# metadata:
+#   name: ginan-api
+#   namespace: argo
+# spec:
+#   selector:
+#     app: ginan-api
+#   ports:
+#   - port: 5000
+#     targetPort: 5000
+#   type: LoadBalancer
