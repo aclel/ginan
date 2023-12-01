@@ -1,0 +1,26 @@
+# Downloads dependencies and generates yaml config files,
+# then runs the pea.
+apiVersion: argoproj.io/v1alpha1
+kind: Workflow
+metadata:
+  namespace: argo
+  generateName: ginan-workflow-
+spec:
+  entrypoint: download-deps
+  serviceAccountName: argo
+  volumes:
+  - name: ginan-data-claim-1
+    persistentVolumeClaim:
+      namespace: argo
+      claimName: ginan-data-claim-1
+
+  templates:
+  - name: download-deps
+    container:
+      image: library/ginan-argo:latest
+      command: [sh, -c]
+      args: ["echo generating message in volume; cowsay hello world | tee /mnt/vol/hello_world.txt"]
+      volumeMounts:
+      - name: ginan-data-claim-1
+        namespace: argo
+        mountPath: /var/ginan

@@ -1,3 +1,38 @@
+apiVersion: storage.k8s.io/v1
+kind: StorageClass
+metadata:
+  name: local-storage
+  namespace: argo
+provisioner: kubernetes.io/no-provisioner
+volumeBindingMode: Immediate
+---
+apiVersion: v1
+kind: PersistentVolume
+metadata:
+  name: ginan-data
+  namespace: argo
+spec:
+  storageClassName: local-storage
+  accessModes:
+    - ReadWriteMany
+  capacity:
+    storage: 2Gi
+  hostPath:
+    path: /var/ginan/
+---
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: ginan-data-claim-1
+  namespace: argo
+spec:
+  storageClassName: local-storage
+  accessModes:
+    - ReadWriteMany
+  resources:
+    requests:
+      storage: 1Gi
+---
 apiVersion: apps/v1
 kind: Deployment
 metadata:
@@ -14,9 +49,9 @@ spec:
         app: ginan-api
     spec:
       volumes:
-      - name: ginan-data
-        hostPath:
-          path: /home/ginan-data
+      - name: ginan-data-claim-1
+        persistentVolumeClaim:
+          claimName: ginan-data-claim-1
       containers:
       - name: ginan-api
         image: ginan-api:latest
@@ -28,9 +63,8 @@ spec:
         ports:
         - containerPort: 5000
         volumeMounts:
-        - name: ginan-data
-          mountPath: /var
-
+          - mountPath: "/var/ginan"
+            name: ginan-data-claim-1
 # ---
 # TODO: This doesn't expose the api successfully
 # apiVersion: v1
