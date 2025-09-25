@@ -488,7 +488,8 @@ def download_gnss_data_entry(
     elif file_type == "nav":
         filename = ".".join(urlparse(file_url).path.split("/")[-1].split(".")[:2])
 
-    while not download_done or retries <= max_retries:
+    # Try until the file has been downloaded or there's no retries left
+    while not download_done and retries <= max_retries:
         try:
             # logging.info(f"Downloading {filename} to {out_path}")
             download_filepath = attempt_url_download(
@@ -548,12 +549,26 @@ def download_files_from_gnss_data(
             files_downloaded.append(filename.name.upper())
         except AttributeError:
             files_downloaded.append(filename)
-    if files_downloaded == []:
-        logging.info("No files downloaded")
+
+    # Validate that all required station files are present on disk
+    missing_files = []
+    present_files = []
+
+    for station in station_list:
+        station_files = list(data_dir.glob(f"{station}*"))
+        if station_files:
+            present_files.extend([f.name for f in station_files])
+        else:
+            missing_files.append(station)
+
+    if present_files:
+        logging.debug(f"Files present on disk: {len(present_files)} files for {len(set([f[:4] for f in present_files]))} stations")
+
+    if missing_files:
+        logging.error(f"Missing files for stations: {missing_files}")
+        raise FileNotFoundError(f"Required files missing for {len(missing_files)} stations: {missing_files}")
     else:
-        stations_downloaded = set([filename[:4] for filename in files_downloaded if filename != None])
-        missing_stations = set(station_list) - stations_downloaded
-        logging.info(f"Not downloaded / missing: {list(missing_stations)}")
+        logging.debug(f"All required files present for {len(station_list)} stations")
 
 
 def most_recent_6_hour():
