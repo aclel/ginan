@@ -622,6 +622,7 @@ def auto_download(
     iau2000: bool,
     datetime_format: str,
     data_source: str,
+    campaign: str,
     verbose: bool,
 ) -> None:
     configure_logging(verbose)
@@ -824,6 +825,7 @@ def auto_download(
                         sampling_rate=generate_sampling_rate(
                             file_ext="SNX", analysis_center="IGS", solution_type="SNX"
                         ),
+                        campaign=campaign,
                         timespan=timedelta(days=1),
                         if_file_present=if_file_present,
                     )
@@ -851,7 +853,8 @@ def auto_download(
                 analysis_center=analysis_center,
                 solution_type=solution_type,
                 project_type=project_type,
-                sampling_rate="15M",
+                campaign=campaign,
+                sampling_rate="05M",
                 timespan=timespan,
                 if_file_present=if_file_present,
             ))
@@ -876,6 +879,7 @@ def auto_download(
                     analysis_center=analysis_center,
                     solution_type=solution_type,
                     project_type=project_type,
+                    campaign=campaign,
                     sampling_rate=generate_sampling_rate(
                         file_ext="ERP", analysis_center=analysis_center, solution_type=solution_type
                     ),
@@ -895,6 +899,7 @@ def auto_download(
                 analysis_center=analysis_center,
                 solution_type=solution_type,
                 project_type=project_type,
+                campaign=campaign,
                 sampling_rate=generate_sampling_rate(
                     file_ext="CLK", analysis_center=analysis_center, solution_type=solution_type
                 ),
@@ -913,6 +918,8 @@ def auto_download(
                 long_filename=long_filename,
                 analysis_center=bia_ac,
                 solution_type=solution_type,
+                project_type=project_type,
+                campaign=campaign,
                 sampling_rate=generate_sampling_rate(
                     file_ext="BIA", analysis_center=analysis_center, solution_type=solution_type
                 ),
@@ -1027,6 +1034,12 @@ def auto_download(
     default="gnss-data",
     type=str,
 )
+@click.option(
+    "--campaign",
+    help="IGS reprocessing campaign: 'repro1', 'repro2', or 'repro3' (repro3 valid for GPS weeks 729-2237). Default: None (standard products)",
+    default=None,
+    type=click.Choice(["repro1", "repro2", "repro3"], case_sensitive=False),
+)
 @click.option("--verbose", is_flag=True)
 def auto_download_main(
     target_dir,
@@ -1066,6 +1079,7 @@ def auto_download_main(
     iau2000,
     datetime_format,
     data_source,
+    campaign,
     verbose,
 ):
     try:
@@ -1114,6 +1128,7 @@ def auto_download_main(
         iau2000,
         datetime_format,
         data_source,
+        campaign,
         verbose,
     )
 
