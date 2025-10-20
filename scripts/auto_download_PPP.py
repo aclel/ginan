@@ -623,6 +623,7 @@ def auto_download(
     datetime_format: str,
     data_source: str,
     campaign: str,
+    product_version: str,
     verbose: bool,
 ) -> None:
     configure_logging(verbose)
@@ -826,6 +827,7 @@ def auto_download(
                             file_ext="SNX", analysis_center="IGS", solution_type="SNX"
                         ),
                         campaign=campaign,
+                        version=product_version if product_version is not None else "0",
                         timespan=timedelta(days=1),
                         if_file_present=if_file_present,
                     )
@@ -854,6 +856,7 @@ def auto_download(
                 solution_type=solution_type,
                 project_type=project_type,
                 campaign=campaign,
+                version=product_version if product_version is not None else "0",
                 sampling_rate="05M",
                 timespan=timespan,
                 if_file_present=if_file_present,
@@ -880,6 +883,7 @@ def auto_download(
                     solution_type=solution_type,
                     project_type=project_type,
                     campaign=campaign,
+                    version=product_version if product_version is not None else "0",
                     sampling_rate=generate_sampling_rate(
                         file_ext="ERP", analysis_center=analysis_center, solution_type=solution_type
                     ),
@@ -900,6 +904,7 @@ def auto_download(
                 solution_type=solution_type,
                 project_type=project_type,
                 campaign=campaign,
+                version=product_version if product_version is not None else "0",
                 sampling_rate=generate_sampling_rate(
                     file_ext="CLK", analysis_center=analysis_center, solution_type=solution_type
                 ),
@@ -920,6 +925,7 @@ def auto_download(
                 solution_type=solution_type,
                 project_type=project_type,
                 campaign=campaign,
+                version=product_version if product_version is not None else "0",
                 sampling_rate=generate_sampling_rate(
                     file_ext="BIA", analysis_center=analysis_center, solution_type=solution_type
                 ),
@@ -1040,6 +1046,12 @@ def auto_download(
     default=None,
     type=click.Choice(["repro1", "repro2", "repro3"], case_sensitive=False),
 )
+@click.option(
+    "--product-version",
+    help="Product version identifier (e.g., '0', '1', '2'). Default: None (auto-determined based on campaign and file type)",
+    default=None,
+    type=str,
+)
 @click.option("--verbose", is_flag=True)
 def auto_download_main(
     target_dir,
@@ -1080,6 +1092,7 @@ def auto_download_main(
     datetime_format,
     data_source,
     campaign,
+    product_version,
     verbose,
 ):
     try:
@@ -1129,6 +1142,7 @@ def auto_download_main(
         datetime_format,
         data_source,
         campaign,
+        product_version,
         verbose,
     )
 
