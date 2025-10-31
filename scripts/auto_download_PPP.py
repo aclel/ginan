@@ -814,19 +814,18 @@ def auto_download(
                             analysis_center="IGS",
                             if_file_present=if_file_present,
                         )
-                    logging.info(f"SNX download: campaign={campaign}, sampling_rate={'07D' if campaign == 'repro3' else '01D'}, timespan={'7 days' if campaign == 'repro3' else '1 day'}")
 
                     # For weekly SINEX files, adjust start_epoch to beginning of GPS week
                     snx_start_epoch = start_epoch
                     snx_end_epoch = end_epoch
-                    if campaign == "repro3":
-                        # Weekly files start on Sunday (day 0 of GPS week)
-                        from gnssanalysis.gn_datetime import GPSDate
-                        gps_date = GPSDate(str(start_epoch.date()))
-                        day_of_week = int(gps_date.gpswkD[-1])  # 0 = Sunday, 6 = Saturday
-                        snx_start_epoch = start_epoch - timedelta(days=day_of_week)
-                        snx_end_epoch = snx_start_epoch + timedelta(days=7)
-                        logging.info(f"Adjusted SNX epoch for weekly file: {snx_start_epoch.date()} to {snx_end_epoch.date()} (GPS week start)")
+
+                    # Weekly files start on Sunday (day 0 of GPS week)
+                    from gnssanalysis.gn_datetime import GPSDate
+                    gps_date = GPSDate(str(start_epoch.date()))
+                    day_of_week = int(gps_date.gpswkD[-1])  # 0 = Sunday, 6 = Saturday
+                    snx_start_epoch = start_epoch - timedelta(days=day_of_week)
+                    snx_end_epoch = snx_start_epoch + timedelta(days=7)
+                    logging.info(f"Adjusted SNX epoch for weekly file: {snx_start_epoch.date()} to {snx_end_epoch.date()} (GPS week start)")
 
                     result = download_product_from_cddis(
                         download_dir=target_dir,
@@ -837,12 +836,10 @@ def auto_download(
                         long_filename=long_filename,
                         analysis_center="IGS",
                         solution_type="SNX",
-                        sampling_rate="07D" if campaign == "repro3" else generate_sampling_rate(
-                            file_ext="SNX", analysis_center="IGS", solution_type="SNX"
-                        ),
+                        sampling_rate="07D",
                         campaign=campaign,
                         version=product_version if product_version is not None else "0",
-                        timespan=timedelta(days=7) if campaign == "repro3" else timedelta(days=1),
+                        timespan=timedelta(days=7),
                         if_file_present=if_file_present,
                     )
                     logging.info(f"SNX download completed: {result}")
