@@ -92,8 +92,9 @@ void detslp_ll(
             tracepdeex(
                 3,
                 trace,
-                "\n%s: slip detected sat=%s f=F%d\n",
+                "\n%s: slip detected: epoch=%s sat=%s f=F%d\n",
                 __FUNCTION__,
+                obs.time.to_string(2).c_str(),
                 obs.Sat.id().c_str(),
                 ft
             );
@@ -145,8 +146,9 @@ void detslp_gf(
         tracepdeex(
             3,
             trace,
-            "\n%s: sat=%s gf0=%f gf1=%f",
+            "\n%s: epoch=%s sat=%s gf0=%f gf1=%f",
             __FUNCTION__,
+            obs.time.to_string(2).c_str(),
             obs.Sat.id().c_str(),
             gf0,
             gf1
@@ -157,8 +159,9 @@ void detslp_gf(
             tracepdeex(
                 3,
                 trace,
-                "\n%s: slip detected: sat=%s gf0=%f gf1=%f",
+                "\n%s: slip detected: epoch=%s sat=%s gf0=%f gf1=%f",
                 __FUNCTION__,
+                obs.time.to_string(2).c_str(),
                 obs.Sat.id().c_str(),
                 gf0,
                 gf1
@@ -214,8 +217,9 @@ void detslp_mw(
         tracepdeex(
             3,
             trace,
-            "\n%s: sat=%s mw0=%f mw1=%f",
+            "\n%s: epoch=%s sat=%s mw0=%f mw1=%f",
             __FUNCTION__,
+            obs.time.to_string(2).c_str(),
             obs.Sat.id().c_str(),
             mw0,
             mw1
@@ -226,8 +230,9 @@ void detslp_mw(
             tracepdeex(
                 3,
                 trace,
-                "\n%s: slip detected: sat=%s mw0=%f mw1=%f",
+                "\n%s: slip detected: epoch=%s sat=%s mw0=%f mw1=%f",
                 __FUNCTION__,
+                obs.time.to_string(2).c_str(),
                 obs.Sat.id().c_str(),
                 mw0,
                 mw1
