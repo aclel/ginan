@@ -1121,6 +1121,8 @@ int main(int argc, char** argv)
                 rec.ready                = true;
                 rec.source               = obsStream.stream.sourceString;
 
+                extractTrackedSignals(rec, obsStream.parser);
+
                 auto now = system_clock::now();
 
                 if (now >= nominalLoopStartTime)
