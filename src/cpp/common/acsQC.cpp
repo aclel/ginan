@@ -25,6 +25,7 @@ bool satFreqs(E_Sys sys, E_FType& ft1, E_FType& ft2, E_FType& ft3)
     bool ft2Ready = false;
 
     // Add defaults in case someone forgets to initialise them...
+    // todo Eugene: Freqs may be duplicate! Initialise with NONE and return a list of unique freqs!
     ft1 = F1;
     ft2 = F2;
     ft3 = F5;
@@ -71,7 +72,23 @@ void detslp_ll(
     ObsList& obsList  ///< List of observations to detect slips within
 )
 {
-    tracepdeex(3, trace, "\n%s: n=%d", __FUNCTION__, obsList.size());
+    if (obsList.empty())
+    {
+        tracepdeex(3, trace, "\n%s: epoch=? n=%zu (empty obsList)", __FUNCTION__, obsList.size());
+        return;
+    }
+
+    // Find first non-null element for the timestamp
+    std::string epoch = "?";
+    for (const auto& sp : obsList)
+    {
+        if (sp) {
+            epoch = sp->time.to_string(2);
+            break;
+        }
+    }
+
+    tracepdeex(3, trace, "\n%s: epoch=%s n=%zu", __FUNCTION__, epoch.c_str(), obsList.size());
 
     // 	auto begin_iter = boost::make_filter_iterator([]
 
@@ -111,7 +128,23 @@ void detslp_gf(
     ObsList& obsList  ///< List of observations to detect slips within
 )
 {
-    tracepdeex(3, trace, "\n%s: n=%d", __FUNCTION__, obsList.size());
+    if (obsList.empty())
+    {
+        tracepdeex(3, trace, "\n%s: epoch=? n=%zu (empty obsList)", __FUNCTION__, obsList.size());
+        return;
+    }
+
+    // Find first non-null element for the timestamp
+    std::string epoch = "?";
+    for (const auto& sp : obsList)
+    {
+        if (sp) {
+            epoch = sp->time.to_string(2);
+            break;
+        }
+    }
+
+    tracepdeex(3, trace, "\n%s: epoch=%s n=%zu", __FUNCTION__, epoch.c_str(), obsList.size());
 
     for (auto& obs : only<GObs>(obsList))
     {
@@ -182,7 +215,23 @@ void detslp_mw(
     ObsList& obsList  ///< List of observations to detect slips within
 )
 {
-    tracepdeex(3, trace, "\n%s: n=%d", __FUNCTION__, obsList.size());
+    if (obsList.empty())
+    {
+        tracepdeex(3, trace, "\n%s: epoch=? n=%zu (empty obsList)", __FUNCTION__, obsList.size());
+        return;
+    }
+
+    // Find first non-null element for the timestamp
+    std::string epoch = "?";
+    for (const auto& sp : obsList)
+    {
+        if (sp) {
+            epoch = sp->time.to_string(2);
+            break;
+        }
+    }
+
+    tracepdeex(3, trace, "\n%s: epoch=%s n=%zu", __FUNCTION__, epoch.c_str(), obsList.size());
 
     for (auto& obs : only<GObs>(obsList))
     {
@@ -978,7 +1027,7 @@ void detectslips(
     tracepdeex(
         2,
         trace,
-        "\nPDE-CS GPST       epoch                  prn  el   lamw     gf12    mw12    siggf  sigmw  "
+        "\nPDE-CS GPST       epoch                   prn  el   lamw    gf12    mw12     siggf  sigmw  "
         "lamew     gf25    mw25   "
         "            LC                   N1   N2   N5\n"
     );
