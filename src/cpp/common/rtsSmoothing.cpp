@@ -468,6 +468,7 @@ void solveSystem(
     std::vector<double> b_backup(b, b + n * neqs);
 
     // LAPACKE uses column-major order by default (LAPACK_COL_MAJOR)
+    std::cout << n << ", " << neqs << ", " << A << ", " << n << ", " << b << ", " << n << std::endl;
     info = LapackWrapper::dposv(LapackWrapper::COL_MAJOR, 'U', n, neqs, A, n, b, n);
     if (info == 0)
     {
@@ -551,14 +552,9 @@ bool FilterData::performRtsComputation(KFState& kfState, const RtsConfiguration&
         auto& fcP = kalmanPlus.filterChunkMap[id];
         auto& fcM = kalmanMinus.filterChunkMap[id];
 
-        if (fcP.numX == 0 || fcM.numX == 0)
-        {
-            BOOST_LOG_TRIVIAL(debug) << "Ignoring  chunk " << id;
-            continue;
-        }
 
-        BOOST_LOG_TRIVIAL(info) << "Filtering chunk " << id << " size " << fcP.numX << " "
-                                << fcM.numX << " start " << fcP.begX << " " << fcM.begX;
+
+
         if (fcP.begX == 0)
         {
             fcP.begX = 1;
@@ -569,11 +565,26 @@ bool FilterData::performRtsComputation(KFState& kfState, const RtsConfiguration&
             fcM.begX = 1;
             fcM.numX -= 1;
         }
+
+        if (fcP.numX == 0 || fcM.numX == 0)
+        {
+            BOOST_LOG_TRIVIAL(debug) << "Ignoring  chunk " << id;
+            continue;
+        }
+
+
         MatrixXd Q    = kalmanMinus.P.block(fcM.begX, fcM.begX, fcM.numX, fcM.numX);
         MatrixXd FP_  = FP.block(fcM.begX, fcP.begX, fcM.numX, fcP.numX);
         int      n    = fcM.numX;
         int      neqs = fcP.numX;
         Q += MatrixXd::Identity(fcM.numX, fcM.numX) * config.regularisation;
+
+        if (fcP.numX == 0 || fcM.numX == 0)
+        {
+            BOOST_LOG_TRIVIAL(debug) << "Ignoring  chunk " << id;
+            continue;
+        }
+
         solveSystem(fcM.numX, fcP.numX, Q.data(), FP_.data());
 
         auto deltaX_   = deltaX.segment(fcP.begX, fcP.numX);

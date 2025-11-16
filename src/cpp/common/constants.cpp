@@ -3,12 +3,14 @@
 #include <boost/assign.hpp>
 #include <iostream>
 #include <map>
+#include <set>
 #include <sstream>
 #include <string>
 #include "common/enums.h"
 #include "common/satSys.hpp"
 
 using std::map;
+using std::set;
 
 map<E_FType, double> genericWavelength = {
     {F1, CLIGHT / FREQ1},
@@ -143,7 +145,7 @@ map<E_Block, vector<E_FType>> blockTypeFrequencies = {
     {E_Block::GPS_IIA,    {F1, F2}},           // L1, L2
     {E_Block::GPS_IIR_A,  {F1, F2}},           // L1, L2
     {E_Block::GPS_IIR_B,  {F1, F2}},           // L1, L2
-    {E_Block::GPS_IIR_M,  {F1, F2}},           // L1, L2 (SVN49 has F5, handled separately)
+    {E_Block::GPS_IIR_M,  {F1, F2}},           // L1, L2
     {E_Block::GPS_IIF,    {F1, F2, F5}},       // L1, L2, L5
     {E_Block::GPS_IIIA,   {F1, F2, F5}},       // L1, L2, L5
 
@@ -198,35 +200,36 @@ map<E_Block, vector<E_FType>> blockTypeFrequencies = {
     {E_Block::LEO,        {F1, F2, F5}},       // L1, L2, L5
 };
 
-// Get frequency bands that a satellite block type broadcasts
-// Returns E_FType frequencies (e.g., F1, F2, F5 for L1, L2, L5)
-// Uses the blockTypeFrequencies map defined above
-vector<E_FType> getExpectedFrequencies(E_Block block, const SatSys* sat)
+// Map of block types to their unsupported signal codes
+// Background: GPS satellites have evolved their signal capabilities over time:
+// - Older blocks (I, II, IIA, IIR-A, IIR-B): Only legacy L2 signals (L2P, L2W, L2Y)
+// - IIR-M and newer (IIF, IIIA): Added modernised L2C signals (L2C, L2S, L2L, L2X)
+//
+// This map lists signals that are NOT supported by each block type.
+// If a block type is not in this map, all signals are supported (default behavior).
+static const map<E_Block, set<E_ObsCode>> unsupportedSignalsByBlockType = {
+    // Older GPS blocks do not support modernised L2C signals
+    {E_Block::GPS_I,     {E_ObsCode::L2C, E_ObsCode::L2S, E_ObsCode::L2L, E_ObsCode::L2X}},
+    {E_Block::GPS_II,    {E_ObsCode::L2C, E_ObsCode::L2S, E_ObsCode::L2L, E_ObsCode::L2X}},
+    {E_Block::GPS_IIA,   {E_ObsCode::L2C, E_ObsCode::L2S, E_ObsCode::L2L, E_ObsCode::L2X}},
+    {E_Block::GPS_IIR_A, {E_ObsCode::L2C, E_ObsCode::L2S, E_ObsCode::L2L, E_ObsCode::L2X}},
+    {E_Block::GPS_IIR_B, {E_ObsCode::L2C, E_ObsCode::L2S, E_ObsCode::L2L, E_ObsCode::L2X}},
+    // IIR-M and newer support L2C signals, so they're not in this list
+};
+
+// Filter signal codes based on block type capabilities
+// Returns true if the signal code is supported by the given block type
+bool isSignalSupportedByBlockType(E_ObsCode code, E_Block blockType)
 {
-    vector<E_FType> frequencies;
-
-    // Look up frequencies in the centralized map
-    auto it = blockTypeFrequencies.find(block);
-    if (it != blockTypeFrequencies.end())
+    auto it = unsupportedSignalsByBlockType.find(blockType);
+    if (it != unsupportedSignalsByBlockType.end())
     {
-        frequencies = it->second;
+        // Block type has restrictions - check if this signal is unsupported
+        return it->second.find(code) == it->second.end();
     }
 
-    // Special case: GPS IIR-M SVN49 had L5 demonstration payload (all other GPS IIR-M satellites do not)
-    // SVN49 was the first GPS satellite to broadcast L5 signal in 2009
-    if (sat && block == +E_Block::GPS_IIR_M)
-    {
-        string svn = sat->svn();
-        // SVN format can be "49", "SVN49", "G049", or "049"
-        bool isSVN49 = (svn == "49" || svn == "SVN49" || svn == "G049" || svn == "049");
-
-        if (isSVN49)
-        {
-            frequencies = {F1, F2, F5};
-        }
-    }
-
-    return frequencies;
+    // Block type not in map - all signals supported (default behavior)
+    return true;
 }
 
 const unsigned int tbl_CRC24Q[] = {

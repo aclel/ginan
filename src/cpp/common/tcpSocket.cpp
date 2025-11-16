@@ -263,7 +263,8 @@ void TcpSocket::timeoutHandler(const boost::system::error_code& err)
 
     if (isConnected == false)
     {
-        BOOST_LOG_TRIVIAL(error
+        BOOST_LOG_TRIVIAL(
+            error
         ) << url.sanitised()
           << " connection timed out, check paths, usernames + passwords, and ports";
         delayedReconnect();
@@ -451,26 +452,29 @@ void TcpSocket::sslHandshakeHandler(const boost::system::error_code& err)
 
 void TcpSocket::connectHandler(
     const boost::system::error_code&      err,
-    tcp::resolver::results_type::iterator endpointIterator
+    tcp::resolver::results_type::iterator it,
+    tcp::resolver::results_type::iterator end,
+    const tcp::resolver::results_type&    endpoints  // Keeps range alive
 )
 {
     if (err)
     {
-        if (endpointIterator != tcp::resolver::results_type::iterator())
-        {
-            // The connection failed. Try the next endpoint in the list.
-            tcp::endpoint endpoint = *endpointIterator;
-            socket_ptr->async_connect(
-                *endpointIterator,
-                boost::bind(&TcpSocket::connectHandler, this, bp::error, ++endpointIterator)
-            );
-
-            return;
-        }
-        else
+        if (it == end)
         {
             ERROR_OUTPUT_RECONNECT_AND_RETURN;
+            return;
         }
+
+        // Choose current and compute next BEFORE the async call
+        auto curr = it;
+        auto next = std::next(it);
+
+        socket_ptr->async_connect(
+            *curr,
+            boost::bind(&TcpSocket::connectHandler, this, bp::error, next, end, endpoints)
+        );
+
+        return;
     }
 
     onConnectedStatistics();
@@ -496,8 +500,8 @@ void TcpSocket::connectHandler(
 }
 
 void TcpSocket::resolveHandler(
-    const boost::system::error_code& err,
-    tcp::resolver::results_type      results
+    const boost::system::error_code&   err,
+    const tcp::resolver::results_type& results
 )
 {
     if (err)
@@ -511,10 +515,13 @@ void TcpSocket::resolveHandler(
     // Attempt a connection to the first endpoint in the list. Each endpoint will be tried until we
     // successfully establish a connection.
 
-    auto endpointIterator = results.begin();
+    auto begin = results.begin();
+    auto next  = std::next(begin);
+    auto end   = results.end();
+
     socket_ptr->async_connect(
-        *endpointIterator,
-        boost::bind(&TcpSocket::connectHandler, this, bp::error, ++endpointIterator)
+        *begin,
+        boost::bind(&TcpSocket::connectHandler, this, bp::error, next, end, results)
     );
 }
 

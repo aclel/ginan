@@ -278,7 +278,9 @@ struct TcpSocket : NetworkStatistics, SerialStream
     void delayedReconnect();
     void connectHandler(
         const boost::system::error_code&      err,
-        tcp::resolver::results_type::iterator endpoint_iterator
+        tcp::resolver::results_type::iterator it,
+        tcp::resolver::results_type::iterator end,
+        const tcp::resolver::results_type&    endpoints
     );
     virtual void requestResponseHandler(const boost::system::error_code& err) {};
 
@@ -290,7 +292,10 @@ struct TcpSocket : NetworkStatistics, SerialStream
 
     // These functions manage the connection using the boost service and
     // asyncronous function calls.
-    void resolveHandler(const boost::system::error_code& err, tcp::resolver::results_type results);
+    void resolveHandler(
+        const boost::system::error_code&   err,
+        const tcp::resolver::results_type& results
+    );
     void sslHandshakeHandler(const boost::system::error_code& err);
     void reconnectTimerHandler(const boost::system::error_code& err);
 
