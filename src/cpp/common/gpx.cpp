@@ -181,13 +181,13 @@ void writeGPXEntry(Trace& output, Receiver& rec, KFState& kfState)
             kfKey.num  = i;
 
             if (i == 0)
-                found &= kfState.getKFValue(kfKey, quat.w());
+                found = found && (kfState.getKFValue(kfKey, quat.w()) != E_Source::NONE);
             if (i == 1)
-                found &= kfState.getKFValue(kfKey, quat.x());
+                found = found && (kfState.getKFValue(kfKey, quat.x()) != E_Source::NONE);
             if (i == 2)
-                found &= kfState.getKFValue(kfKey, quat.y());
+                found = found && (kfState.getKFValue(kfKey, quat.y()) != E_Source::NONE);
             if (i == 3)
-                found &= kfState.getKFValue(kfKey, quat.z());
+                found = found && (kfState.getKFValue(kfKey, quat.z()) != E_Source::NONE);
         }
 
         if (found)

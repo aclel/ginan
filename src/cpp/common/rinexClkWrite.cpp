@@ -123,7 +123,7 @@ void getKalmanRecClks(ClockList& clkEntryList, ClockEntry& referenceRec, KFState
     for (auto& [key, index] : kfState.kfIndexMap)
     {
         if ((key.type == KF::REC_SYS_BIAS || key.type == KF::REC_CLOCK) &&
-            (firstSys == E_Sys::NONE || firstSys == key.Sat))
+            (firstSys.sys == E_Sys::NONE || firstSys == key.Sat))
         {
             firstSys = key.Sat;
 
@@ -468,14 +468,14 @@ void outputClocksSet(
 
     switch (clkDataSatSrcs.front())  // todo aaron, remove this function
     {
-        case +E_Source::NONE:
+        case E_Source::NONE:
             break;
-        case +E_Source::KALMAN:
+        case E_Source::KALMAN:
             getKalmanSatClks(clkEntryList, outSys, kfState);
             break;
-        case +E_Source::PRECISE:    // fallthrough
-        case +E_Source::BROADCAST:  // fallthrough
-        case +E_Source::SSR:
+        case E_Source::PRECISE:    // fallthrough
+        case E_Source::BROADCAST:  // fallthrough
+        case E_Source::SSR:
             getSatClksFromEph(clkEntryList, time, outSys, clkDataSatSrcs);
             break;
         default:
@@ -485,19 +485,20 @@ void outputClocksSet(
 
     switch (clkDataRecSrcs.front())
     {
-        case +E_Source::NONE:
+        case E_Source::NONE:
             break;
-        case +E_Source::KALMAN:
+        case E_Source::KALMAN:
             getKalmanRecClks(clkEntryList, referenceRec, kfState);
             break;
-        case +E_Source::PRECISE:
+        case E_Source::PRECISE:
             getPreciseRecClks(clkEntryList, receiverMap_ptr, time);
             break;
-        case +E_Source::SSR:        // fallthrough
-        case +E_Source::BROADCAST:  // fallthrough
+        case E_Source::SSR:        // fallthrough
+        case E_Source::BROADCAST:  // fallthrough
         default:
-            BOOST_LOG_TRIVIAL(error) << "Printing receiver clocks for "
-                                     << clkDataRecSrcs.front()._to_string() << " not implemented.";
+            BOOST_LOG_TRIVIAL(error)
+                << "Printing receiver clocks for " << enum_to_string(clkDataRecSrcs.front())
+                << " not implemented.";
             return;
     }
 

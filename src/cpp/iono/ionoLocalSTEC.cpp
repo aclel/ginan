@@ -36,7 +36,7 @@ double IrregGridCoef(int Index, double recLatDeg, double recLonDeg)
             if (basis.Sat != sat0)
                 break;
 
-            if (basis.type != +E_BasisType::GRIDPOINT)
+            if (basis.type != E_BasisType::GRIDPOINT)
                 continue;
 
             auto& atmReg = nav.ssrAtm.atmosRegionsMap[basis.regionID];
@@ -122,7 +122,7 @@ int configIonModelLocal_(Trace& trace)
     // tracepdeex(2,trace, "\nIONO_BASIS ind reg sat type ind");
     // for (auto [j, basis] : localBasisVec)
     // 	tracepdeex(2,trace, "\nIONO_BASIS %3d %2d %s %s %3d ", j, basis.regionID,
-    // basis.Sat.id().c_str(), (basis.type==+E_BasisType::POLYNOMIAL)?"poly":"grid", basis.index);
+    // basis.Sat.id().c_str(), (basis.type==E_BasisType::POLYNOMIAL)?"poly":"grid", basis.index);
     // tracepdeex(2,trace, "\n");
 
     return acsConfig.ionModelOpts.numBasis;
@@ -241,9 +241,9 @@ double ionCoefLocal(
 
     switch (basis.type)
     {
-        case +E_BasisType::POLYNOMIAL:
+        case E_BasisType::POLYNOMIAL:
             return ionCoefPolynomial(trace, atmReg, recLatDeg, recLonDeg, basis.index);
-        case +E_BasisType::GRIDPOINT:
+        case E_BasisType::GRIDPOINT:
         {
             if (atmReg.gridType == 0)
                 return IrregGridCoef(ind, recLatDeg, recLonDeg);

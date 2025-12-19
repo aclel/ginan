@@ -33,9 +33,8 @@ struct KFState;
 
 /** Types of objects that are stored in kalman filter binary archives
  */
-BETTER_ENUM(
-    E_SerialObject,
-    int,
+enum class E_SerialObject : int
+{
     NONE,
     FILTER_MINUS,
     FILTER_PLUS,
@@ -45,7 +44,7 @@ BETTER_ENUM(
     STRING,
     MEASUREMENT,
     METADATA
-)
+};
 
 struct TransitionMatrixObject
 {
@@ -144,10 +143,7 @@ void spitFilterToFile(
 
     try
     {
-        std::fstream fileStream(
-            filename,
-            std::ifstream::binary | std::ifstream::out | std::ifstream::app
-        );
+        std::fstream fileStream(filename, std::ios::binary | std::ios::out | std::ios::app);
 
         if (!fileStream)
         {
@@ -156,13 +152,16 @@ void spitFilterToFile(
             return;
         }
 
-        // 	std::cout << "RTS - writing " << type._to_string() << " to file " << filename << "\n";
+        // 	std::cout << "RTS - writing " << enum_to_string(type) << " to file " << filename <<
+        // "\n";
 
         binary_oarchive serial(fileStream, 1);  // no header
 
+        // On Windows/MinGW, tellp() returns 0 in append mode, so seek to end first
+        fileStream.seekp(0, std::ios::end);
         long int pos = fileStream.tellp();
 
-        int type_int = type;
+        int type_int = static_cast<int>(type);
         serial & type_int;
         serial & object;
 
@@ -187,7 +186,7 @@ bool getFilterObjectFromFile(
     string    filename            ///< The path to the archive file to read from
 )
 {
-    std::fstream fileStream(filename, std::ifstream::binary | std::ifstream::in);
+    std::fstream fileStream(filename, std::ios::binary | std::ios::in);
 
     if (!fileStream)
     {
@@ -209,18 +208,25 @@ bool getFilterObjectFromFile(
         fileStream.seekg(startPos - sizeof(itemDelta), fileStream.beg);
     }
 
-    long int currentPosition = fileStream.tellg();
+    std::streamoff currentPosition = fileStream.tellg();
+
+    if (currentPosition < 0)
+    {
+        BOOST_LOG_TRIVIAL(error) << "Failed to get position in file " << filename
+                                 << " (tellg() returned " << currentPosition << ")";
+        return false;
+    }
 
     serial & itemDelta;
 
-    long int itemPosition = currentPosition - itemDelta;
+    std::streamoff itemPosition = currentPosition - itemDelta;
 
     fileStream.seekg(itemPosition, fileStream.beg);
 
     int typeInt;
     serial & typeInt;
 
-    E_SerialObject type = E_SerialObject::_from_integral(typeInt);
+    E_SerialObject type = int_to_enum<E_SerialObject>(typeInt);
     if (type != expectedType)
     {
         std::cout << "\n"

@@ -15,7 +15,7 @@ using std::string;
  */
 struct GeomagMainField
 {
-    GeomagMainField(){
+    GeomagMainField() {
 
     };
 

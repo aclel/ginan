@@ -406,7 +406,7 @@ void readCrd(string filepath)  ///< CRD file to read
             // 			||crdSession.h4.xcv_amp_app_ind			!= false
             || crdSession.h4.stn_sysdelay_app_ind != true ||
             crdSession.h4.SC_sysdelay_app_ind != false ||
-            crdSession.h4.range_type_ind != E_SlrRangeType::TWO_WAY)
+            int_to_enum<E_SlrRangeType>(crdSession.h4.range_type_ind) != E_SlrRangeType::TWO_WAY)
         {
             BOOST_LOG_TRIVIAL(warning) << "Unexpected H4 flags!";
 
@@ -463,7 +463,7 @@ void readCrd(string filepath)  ///< CRD file to read
             }
 
             // Calculate tx & bounce times
-            obs.epochEvent = E_CrdEpochEvent::_from_integral(record.epoch_event);
+            obs.epochEvent = int_to_enum<E_CrdEpochEvent>(record.epoch_event);
             switch (obs.epochEvent)
             {
                 case E_CrdEpochEvent::REC_TX:

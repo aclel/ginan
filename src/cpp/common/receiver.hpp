@@ -25,6 +25,8 @@ struct Solution
     E_Solution status          = E_Solution::NONE;  ///< solution status
     int        numMeas         = 0;  ///< number of valid measurements used to estimate solution
     Dops       dops;                 ///< dilution of precision (GDOP,PDOP,HDOP,VDOP)
+    double     horzPL = -1;          ///< Horizontal Protection Level for SBAS
+    double     vertPL = -1;          ///< Vertical Protection Level for SBAS
 };
 
 struct RinexStation
@@ -123,6 +125,7 @@ struct Receiver : ReceiverLogs, Rtk
 
     string traceFilename;
     string jsonTraceFilename;
+    string sppOutputFile;
 
     map<SatSys, GTime> savedSlips;
 

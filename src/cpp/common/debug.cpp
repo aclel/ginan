@@ -835,7 +835,7 @@ void debugTime()
 
 const GTime j2000TT = GEpoch{
     2000,
-    E_Month::JAN,
+    static_cast<int>(E_Month::JAN),
     1,
     11,
     58,
@@ -843,7 +843,7 @@ const GTime j2000TT = GEpoch{
 };  // defined in utc 11:58:55.816
 void rotationTest()
 {
-    GTime time = GEpoch{2019, E_Month::FEB, 6, 0, 0, 0};
+    GTime time = GEpoch{2019, static_cast<int>(E_Month::FEB), 6, 0, 0, 0};
 
     Vector3d nowPosI  = Vector3d::Zero();
     nowPosI(0)        = 20000000;
@@ -854,7 +854,7 @@ void rotationTest()
     // 	change to inherit long double, then require to_double() for conversions, deny otherwise.
 
     // do a day's worth of 20 second increment tests
-    for (; time < GEpoch{2019, E_Month::FEB, 9, 0, 0, 0}; time += 10)
+    for (; time < GEpoch{2019, static_cast<int>(E_Month::FEB), 9, 0, 0, 0}; time += 10)
     {
         Matrix3d i2tMatrix = Matrix3d::Identity();
 
@@ -1350,7 +1350,7 @@ void debugBlq()
     std::cout << "\nDebugging OTL BLQ: " << rec.id << std::fixed << "\n";
     for (auto& [wave, disp] : otlDisplacementMap[id])
     {
-        std::cout << wave._to_string() << ":";
+        std::cout << enum_to_string(wave) << ":";
         for (int i = 0; i < 3; i++)
             std::cout << "\t" << std::setprecision(5) << std::setw(9) << disp.amplitude[i];
         for (int i = 0; i < 3; i++)
@@ -1361,7 +1361,7 @@ void debugBlq()
     std::cout << "\nDebugging ATL BLQ: " << rec.id << std::fixed << "\n";
     for (auto& [wave, disp] : atlDisplacementMap[id])
     {
-        std::cout << wave._to_string() << ":";
+        std::cout << enum_to_string(wave) << ":";
         for (int i = 0; i < 3; i++)
             std::cout << "\t" << std::setprecision(5) << std::setw(9) << disp.amplitude[i];
         for (int i = 0; i < 3; i++)

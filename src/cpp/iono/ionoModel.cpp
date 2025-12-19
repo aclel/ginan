@@ -90,10 +90,10 @@ void filterIonosphere(
     if (!ionoConfigured)
         return;
 
-    if (acsConfig.ionModelOpts.model == +E_IonoModel::NONE)
+    if (acsConfig.ionModelOpts.model == E_IonoModel::NONE)
         return;
 
-    if (acsConfig.ionModelOpts.model == +E_IonoModel::MEAS_OUT)
+    if (acsConfig.ionModelOpts.model == E_IonoModel::MEAS_OUT)
         return;
 
     tracepdeex(2, trace, "UPDATE IONO MODEL ... %s\n", time.to_string().c_str());
@@ -152,7 +152,7 @@ void filterIonosphere(
     }
 
     int nStateTot = acsConfig.ionModelOpts.numBasis + nSatTot + nRecTot;
-    if (acsConfig.ionModelOpts.model == +E_IonoModel::LOCAL)
+    if (acsConfig.ionModelOpts.model == E_IonoModel::LOCAL)
     {
         nStateTot = 0;
         for (auto& [regId, regData] : nav.ssrAtm.atmosRegionsMap)
@@ -192,7 +192,7 @@ void filterIonosphere(
                 2,
                 trace,
                 "#IONO_MOD WARNING change in reference station for %s: %s\n",
-                sys._to_string(),
+                enum_to_string(sys),
                 maxCountRec[sys]
             );
             reset_DCBs[sys] = true;
@@ -203,7 +203,7 @@ void filterIonosphere(
             4,
             trace,
             "#IONO_MOD REF STATION for %s: %s\n",
-            sys._to_string(),
+            enum_to_string(sys),
             maxCountRec[sys]
         );
     }
@@ -402,7 +402,7 @@ bool galCodeMatch(
     if (galSigGroups.find(code) == galSigGroups.end())
         return false;
 
-    E_ObsCode code2 = E_ObsCode::_from_integral(keyNum / 100);
+    E_ObsCode code2 = int_to_enum<E_ObsCode>(keyNum / 100);
     if (galSigGroups.find(code2) == galSigGroups.end())
         return false;
 
@@ -428,23 +428,23 @@ bool queryBiasDCB(
     double dcbVal;
     double dcbVar;
 
-    bool pass = false;
+    E_Source pass = E_Source::NONE;
     for (auto& [key, index] : kfState.kfIndexMap)
     {
-        if (key.type != +KF::CODE_BIAS)
+        if (key.type != KF::CODE_BIAS)
             continue;
         if (key.Sat != Sat)
             continue;
         if (key.str != Rec)
             continue;
-        if (Sat.sys == +E_Sys::GAL && !galCodeMatch(key.num, code))
+        if (Sat.sys == E_Sys::GAL && !galCodeMatch(key.num, code))
             continue;
 
         pass = kfState.getKFValue(key, dcbVal, &dcbVar);
         break;
     }
 
-    if (pass == false)
+    if (pass == E_Source::NONE)
         return false;
 
     double coef = TEC_CONSTANT * SQR(lamb / CLIGHT);

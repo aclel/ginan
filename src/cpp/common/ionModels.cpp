@@ -52,7 +52,8 @@ double ionmodel(GTime t, const double* ion, const VectorPos& pos, const AzEl& az
 
     if (ion == nullptr || norm(ion, 8) <= 0)
     {
-        BOOST_LOG_TRIVIAL(warning
+        BOOST_LOG_TRIVIAL(
+            warning
         ) << "ionmodel: ionospheric model parameters are not set, using default values (2004/1/1)";
         ion = ion_default;
     }
@@ -298,7 +299,7 @@ bool ionDelay(
         ionppp(pos, azel, tec.rb, hion, posp);
         double fs = ionmapf(pos, azel, mapFn, layerHeight);
 
-        if (frame == +E_IonoFrame::SUN_FIXED)
+        if (frame == E_IonoFrame::SUN_FIXED)
         {
             /* earth rotation correction (sun-fixed coordinate) */
             posp[1] += 2 * PI * (time - tec.time).to_double() / 86400;

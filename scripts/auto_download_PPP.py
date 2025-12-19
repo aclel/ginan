@@ -1,6 +1,5 @@
 # Script for auto-downloading the necessary files to run PPP solutions in Ginan
 # import boto3
-import os
 import json
 import click
 import random
@@ -14,7 +13,6 @@ from typing import Tuple
 from urllib.parse import urlparse
 from contextlib import contextmanager
 from datetime import datetime, timedelta
-from concurrent.futures import ThreadPoolExecutor, as_completed
 
 from gnssanalysis.gn_datetime import GPSDate
 from gnssanalysis.gn_download import (
@@ -490,8 +488,7 @@ def download_gnss_data_entry(
     elif file_type == "nav":
         filename = ".".join(urlparse(file_url).path.split("/")[-1].split(".")[:2])
 
-    # Try until the file has been downloaded or there's no retries left
-    while not download_done and retries <= max_retries:
+    while not download_done or retries <= max_retries:
         try:
             # logging.info(f"Downloading {filename} to {out_path}")
             download_filepath = attempt_url_download(
@@ -551,26 +548,12 @@ def download_files_from_gnss_data(
             files_downloaded.append(filename.name.upper())
         except AttributeError:
             files_downloaded.append(filename)
-
-    # Validate that all required station files are present on disk
-    missing_files = []
-    present_files = []
-
-    for station in station_list:
-        station_files = list(data_dir.glob(f"{station}*"))
-        if station_files:
-            present_files.extend([f.name for f in station_files])
-        else:
-            missing_files.append(station)
-
-    if present_files:
-        logging.debug(f"Files present on disk: {len(present_files)} files for {len(set([f[:4] for f in present_files]))} stations")
-
-    if missing_files:
-        logging.error(f"Missing files for stations: {missing_files}")
-        raise FileNotFoundError(f"Required files missing for {len(missing_files)} stations: {missing_files}")
+    if files_downloaded == []:
+        logging.info("No files downloaded")
     else:
-        logging.debug(f"All required files present for {len(station_list)} stations")
+        stations_downloaded = set([filename[:4] for filename in files_downloaded if filename != None])
+        missing_stations = set(station_list) - stations_downloaded
+        logging.info(f"Not downloaded / missing: {list(missing_stations)}")
 
 
 def most_recent_6_hour():
@@ -622,8 +605,6 @@ def auto_download(
     iau2000: bool,
     datetime_format: str,
     data_source: str,
-    campaign: str,
-    product_version: str,
     verbose: bool,
 ) -> None:
     configure_logging(verbose)
@@ -708,265 +689,153 @@ def auto_download(
         end_epoch = datetime.now()
         long_filename = long_filename_cddis_cutoff(epoch=datetime.today())
 
-    tasks = []
-    max_workers = os.cpu_count() or 4
-
-    with ThreadPoolExecutor(max_workers=max_workers) as executor:
-        if atx:
-            tasks.append(executor.submit(
-                download_atx,
+    # Download products based on flags
+    if atx:
+        download_atx(download_dir=target_dir, long_filename=long_filename, if_file_present=if_file_present)
+    if oload:
+        download_ocean_loading_model(download_dir=model_dir, if_file_present=if_file_present)
+    if aload:
+        download_atmosphere_loading_model(download_dir=model_dir, if_file_present=if_file_present)
+    if igrf:
+        download_geomagnetic_model(download_dir=model_dir, if_file_present=if_file_present)
+    if egm:
+        download_geopotential_model(download_dir=model_dir, if_file_present=if_file_present)
+    if opole:
+        download_ocean_pole_tide_file(download_dir=model_dir, if_file_present=if_file_present)
+    if fes:
+        download_ocean_tide_potential_model(download_dir=model_dir, if_file_present=if_file_present)
+    if planet:
+        download_planetary_ephemerides_file(download_dir=model_dir, if_file_present=if_file_present)
+    if trop_model:
+        download_trop_model(download_dir=trop_dir, model=trop_model, if_file_present=if_file_present)
+    if sat_meta:
+        download_satellite_metadata_snx(download_dir=target_dir, if_file_present=if_file_present)
+    if yaw:
+        download_yaw_files(download_dir=model_dir, if_file_present=if_file_present)
+    if nav:
+        download_brdc(
+            download_dir=target_dir,
+            start_epoch=start_epoch,
+            end_epoch=end_epoch,
+            source=data_source,
+            if_file_present=if_file_present,
+        )
+    if snx and most_recent:
+        download_most_recent_cddis_file(
+            download_dir=target_dir,
+            pointer_date=start_gpsdate,
+            file_type="SNX",
+            long_filename=long_filename,
+            if_file_present=if_file_present,
+        )
+    if snx and not most_recent:
+        try:
+            download_product_from_cddis(
                 download_dir=target_dir,
+                start_epoch=start_epoch,
+                end_epoch=end_epoch,
+                file_ext="SNX",
+                limit=None,  # DZ: removed limit for downloading files of multiple days
+                long_filename=long_filename,
+                analysis_center="IGS",
+                solution_type="SNX",
+                sampling_rate=generate_sampling_rate(file_ext="SNX", analysis_center="IGS", solution_type="SNX"),
+                timespan=timedelta(days=1),
+                if_file_present=if_file_present,
+            )
+        except ftplib.all_errors as e:
+            logging.info(f"Received an error ({e}) while try to download - date too recent.")
+            logging.info(f"Downloading most recent SNX file available.")
+            download_most_recent_cddis_file(
+                download_dir=target_dir,
+                pointer_date=start_gpsdate,
+                file_type="SNX",
                 long_filename=long_filename,
                 if_file_present=if_file_present,
-            ))
-
-        if oload:
-            tasks.append(executor.submit(
-                download_ocean_loading_model,
-                download_dir=model_dir,
-                if_file_present=if_file_present,
-            ))
-
-        if aload:
-            tasks.append(executor.submit(
-                download_atmosphere_loading_model,
-                download_dir=model_dir,
-                if_file_present=if_file_present,
-            ))
-
-        if igrf:
-            tasks.append(executor.submit(
-                download_geomagnetic_model,
-                download_dir=model_dir,
-                if_file_present=if_file_present,
-            ))
-
-        if egm:
-            tasks.append(executor.submit(
-                download_geopotential_model,
-                download_dir=model_dir,
-                if_file_present=if_file_present,
-            ))
-
-        if opole:
-            tasks.append(executor.submit(
-                download_ocean_pole_tide_file,
-                download_dir=model_dir,
-                if_file_present=if_file_present,
-            ))
-
-        if fes:
-            tasks.append(executor.submit(
-                download_ocean_tide_potential_model,
-                download_dir=model_dir,
-                if_file_present=if_file_present,
-            ))
-
-        if planet:
-            tasks.append(executor.submit(
-                download_planetary_ephemerides_file,
-                download_dir=model_dir,
-                if_file_present=if_file_present,
-            ))
-
-        if trop_model:
-            tasks.append(executor.submit(
-                download_trop_model,
-                download_dir=trop_dir,
-                model=trop_model,
-                if_file_present=if_file_present,
-            ))
-
-        if sat_meta:
-            tasks.append(executor.submit(
-                download_satellite_metadata_snx,
-                download_dir=target_dir,
-                if_file_present=if_file_present,
-            ))
-
-        if yaw:
-            tasks.append(executor.submit(
-                download_yaw_files,
-                download_dir=model_dir,
-                if_file_present=if_file_present,
-            ))
-
-        if nav:
-            tasks.append(executor.submit(
-                download_brdc,
+            )
+    if sp3:
+        download_product_from_cddis(
+            download_dir=target_dir,
+            start_epoch=start_epoch,
+            end_epoch=end_epoch,
+            file_ext="SP3",
+            limit=None,
+            long_filename=long_filename,
+            analysis_center=analysis_center,
+            solution_type=solution_type,
+            project_type=project_type,
+            sampling_rate=generate_sampling_rate(
+                file_ext="SP3", analysis_center=analysis_center, solution_type=solution_type
+            ),
+            timespan=timespan,
+            if_file_present=if_file_present,
+        )
+    if erp:
+        if iau2000:
+            # If IAU2000 option is chosen, download IAU2000 data file for Earth rotation parameters
+            download_iau2000_file(download_dir=target_dir, start_epoch=start_epoch, if_file_present=if_file_present)
+        else:
+            # Otherwise, download the ERP file
+            download_product_from_cddis(
                 download_dir=target_dir,
                 start_epoch=start_epoch,
                 end_epoch=end_epoch,
-                source=data_source,
-                filePeriod=rinex_file_period,
-                if_file_present=if_file_present,
-            ))
-
-        if snx:
-            def snx_task():
-                try:
-                    if most_recent:
-                        return download_most_recent_cddis_file(
-                            download_dir=target_dir,
-                            pointer_date=start_gpsdate,
-                            file_type="SNX",
-                            long_filename=long_filename,
-                            analysis_center="IGS",
-                            if_file_present=if_file_present,
-                        )
-
-                    # For weekly SINEX files, adjust start_epoch to beginning of GPS week
-                    snx_start_epoch = start_epoch
-                    snx_end_epoch = end_epoch
-
-                    # Weekly files start on Sunday (day 0 of GPS week)
-                    from gnssanalysis.gn_datetime import GPSDate
-                    gps_date = GPSDate(str(start_epoch.date()))
-                    day_of_week = int(gps_date.gpswkD[-1])  # 0 = Sunday, 6 = Saturday
-                    snx_start_epoch = start_epoch - timedelta(days=day_of_week)
-                    snx_end_epoch = snx_start_epoch + timedelta(days=7)
-                    logging.info(f"Adjusted SNX epoch for weekly file: {snx_start_epoch.date()} to {snx_end_epoch.date()} (GPS week start)")
-
-                    result = download_product_from_cddis(
-                        download_dir=target_dir,
-                        start_epoch=snx_start_epoch,
-                        end_epoch=snx_end_epoch,
-                        file_ext="SNX",
-                        limit=None,
-                        long_filename=long_filename,
-                        analysis_center="IGS",
-                        solution_type="SNX",
-                        sampling_rate="07D",
-                        campaign=campaign,
-                        version=product_version if product_version is not None else "0",
-                        timespan=timedelta(days=7),
-                        if_file_present=if_file_present,
-                    )
-                    logging.info(f"SNX download completed: {result}")
-                    return result
-                except Exception as e:
-                    logging.error(f"SNX error {e}, trying most recent")
-                    import traceback
-                    traceback.print_exc()
-                    return download_most_recent_cddis_file(
-                        download_dir=target_dir,
-                        pointer_date=start_gpsdate,
-                        file_type="SNX",
-                        long_filename=long_filename,
-                        analysis_center="IGS",
-                        if_file_present=if_file_present,
-                    )
-            tasks.append(executor.submit(snx_task))
-
-        if sp3:
-            tasks.append(executor.submit(
-                download_product_from_cddis,
-                download_dir=target_dir,
-                start_epoch=start_epoch,
-                end_epoch=end_epoch,
-                file_ext="SP3",
+                file_ext="ERP",
                 limit=None,
                 long_filename=long_filename,
                 analysis_center=analysis_center,
                 solution_type=solution_type,
                 project_type=project_type,
-                campaign=campaign,
-                version=product_version if product_version is not None else "0",
-                sampling_rate="05M",
-                timespan=timespan,
-                if_file_present=if_file_present,
-            ))
-
-        if erp:
-            if iau2000:
-                tasks.append(executor.submit(
-                    download_iau2000_file,
-                    download_dir=target_dir,
-                    start_epoch=start_epoch,
-                    if_file_present=if_file_present,
-                ))
-            else:
-                tasks.append(executor.submit(
-                    download_product_from_cddis,
-                    download_dir=target_dir,
-                    start_epoch=start_epoch,
-                    end_epoch=end_epoch,
-                    file_ext="ERP",
-                    limit=None,
-                    long_filename=long_filename,
-                    analysis_center=analysis_center,
-                    solution_type=solution_type,
-                    project_type=project_type,
-                    campaign=campaign,
-                    version=product_version if product_version is not None else "0",
-                    sampling_rate=generate_sampling_rate(
-                        file_ext="ERP", analysis_center=analysis_center, solution_type=solution_type
-                    ),
-                    timespan=timespan,
-                    if_file_present=if_file_present,
-                ))
-
-        if clk:
-            tasks.append(executor.submit(
-                download_product_from_cddis,
-                download_dir=target_dir,
-                start_epoch=start_epoch,
-                end_epoch=end_epoch,
-                file_ext="CLK",
-                limit=None,
-                long_filename=long_filename,
-                analysis_center=analysis_center,
-                solution_type=solution_type,
-                project_type=project_type,
-                campaign=campaign,
-                version=product_version if product_version is not None else "0",
                 sampling_rate=generate_sampling_rate(
-                    file_ext="CLK", analysis_center=analysis_center, solution_type=solution_type
+                    file_ext="ERP", analysis_center=analysis_center, solution_type=solution_type
                 ),
                 timespan=timespan,
                 if_file_present=if_file_present,
-            ))
-
-        if bia:
-            tasks.append(executor.submit(
-                download_product_from_cddis,
-                download_dir=target_dir,
-                start_epoch=start_epoch,
-                end_epoch=end_epoch,
-                file_ext="BIA",
-                limit=None,
-                long_filename=long_filename,
-                analysis_center=bia_ac,
-                solution_type=solution_type,
-                project_type=project_type,
-                campaign=campaign,
-                version=product_version if product_version is not None else "0",
-                sampling_rate=generate_sampling_rate(
-                    file_ext="BIA", analysis_center=analysis_center, solution_type=solution_type
-                ),
-                timespan=timespan,
-                if_file_present=if_file_present,
-            ))
-
-        if station_list:
-            tasks.append(executor.submit(
-                download_files_from_gnss_data,
-                station_list=station_list,
-                start_epoch=start_epoch,
-                end_epoch=end_epoch,
-                data_dir=rinex_data_dir,
-                file_period=rinex_file_period,
-                file_type="obs",
-                if_file_present=if_file_present,
-            ))
-
-        # Wait for all
-        for future in as_completed(tasks):
-            try:
-                result = future.result()
-            except Exception as e:
-                logging.error(f"Download failed: {e}")
-                raise e
+            )
+    if clk:
+        download_product_from_cddis(
+            download_dir=target_dir,
+            start_epoch=start_epoch,
+            end_epoch=end_epoch,
+            file_ext="CLK",
+            limit=None,
+            long_filename=long_filename,
+            analysis_center=analysis_center,
+            solution_type=solution_type,
+            project_type=project_type,
+            sampling_rate=generate_sampling_rate(
+                file_ext="CLK", analysis_center=analysis_center, solution_type=solution_type
+            ),
+            timespan=timespan,
+            if_file_present=if_file_present,
+        )
+    if bia:
+        download_product_from_cddis(
+            download_dir=target_dir,
+            start_epoch=start_epoch,
+            end_epoch=end_epoch,
+            file_ext="BIA",
+            limit=None,
+            long_filename=long_filename,
+            analysis_center=bia_ac,
+            solution_type=solution_type,
+            sampling_rate=generate_sampling_rate(
+                file_ext="BIA", analysis_center=analysis_center, solution_type=solution_type
+            ),
+            timespan=timespan,
+            if_file_present=if_file_present,
+        )
+    if station_list:
+        # Download RINEX files from gnss-data (if station_list provided)
+        download_files_from_gnss_data(
+            station_list=station_list,
+            start_epoch=start_epoch,
+            end_epoch=end_epoch,
+            data_dir=rinex_data_dir,
+            file_period=rinex_file_period,
+            file_type="obs",
+            if_file_present=if_file_present,
+        )
 
 
 @click.command()
@@ -1055,18 +924,6 @@ def auto_download(
     default="gnss-data",
     type=str,
 )
-@click.option(
-    "--campaign",
-    help="IGS reprocessing campaign: 'repro1', 'repro2', or 'repro3' (repro3 valid for GPS weeks 729-2237). Default: None (standard products)",
-    default=None,
-    type=click.Choice(["repro1", "repro2", "repro3"], case_sensitive=False),
-)
-@click.option(
-    "--product-version",
-    help="Product version identifier (e.g., '0', '1', '2'). Default: None (auto-determined based on campaign and file type)",
-    default=None,
-    type=str,
-)
 @click.option("--verbose", is_flag=True)
 def auto_download_main(
     target_dir,
@@ -1106,8 +963,6 @@ def auto_download_main(
     iau2000,
     datetime_format,
     data_source,
-    campaign,
-    product_version,
     verbose,
 ):
     try:
@@ -1156,8 +1011,6 @@ def auto_download_main(
         iau2000,
         datetime_format,
         data_source,
-        campaign,
-        product_version,
         verbose,
     )
 

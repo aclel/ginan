@@ -1,5 +1,61 @@
 #pragma once
 
+#include <string>
+#include "common/enums.h"
+
+// Constants that are used in trace/logging even when MongoDB is disabled
+namespace Constants
+{
+/**
+ * @namespace Mongo
+ * @brief Contains constant string literals used for MongoDB database and field names.
+ *
+ * This namespace provides a collection of constant string literals that represent
+ * database names and variable/field names commonly used in MongoDB operations.
+ *
+ */
+namespace Mongo
+{
+constexpr const char* EDITING_DB      = "Editing";
+constexpr const char* MEASUREMENTS_DB = "Measurements";
+constexpr const char* STATE_DB        = "State";
+constexpr const char* STATES_DB       = "States";  ///@todo are STATE_DB and STATES_DB the same?
+constexpr const char* CONFIG_DB       = "Config";
+constexpr const char* TRACE_DB        = "Trace";
+constexpr const char* GEOMETRY_DB     = "Geometry";
+constexpr const char* CONTENT_DB      = "Content";
+
+constexpr const char* DX_VAR        = "dx";
+constexpr const char* NUM_VAR       = "Num";
+constexpr const char* X_VAR         = "x";
+constexpr const char* SIGMA_VAR     = "sigma";
+constexpr const char* COVAR_VAR     = "Covar";
+constexpr const char* AZIMUTH_VAR   = "Azimuth";
+constexpr const char* ELEVATION_VAR = "Elevation";
+constexpr const char* NADIR_VAR     = "Nadir";
+constexpr const char* SERIES_VAR    = "Series";
+constexpr const char* EPOCH_VAR     = "Epoch";
+constexpr const char* SAT_VAR       = "Sat";
+constexpr const char* STR_VAR       = "Site";
+constexpr const char* TYPE_VAR      = "Type";
+constexpr const char* VALUE_VAR     = "Values";
+
+};  // namespace Mongo
+};  // namespace Constants
+
+/**
+ * @brief Converts a C-style string (const char*) to a std::string.
+ *
+ * @param cstr A pointer to a null-terminated C-style string.
+ * @return A std::string object containing the same characters as the input C-style string.
+ */
+inline std::string toString(const char* cstr)
+{
+    return std::string(cstr);
+}
+
+#ifdef ENABLE_MONGODB
+
 #include <array>
 #include <boost/date_time/posix_time/posix_time.hpp>
 #include <boost/log/sinks/basic_sink_backend.hpp>
@@ -14,10 +70,8 @@
 #include <mongocxx/instance.hpp>
 #include <mongocxx/pool.hpp>
 #include <mongocxx/uri.hpp>
-#include <string>
 #include <tuple>
 #include <vector>
-#include "common/enums.h"
 
 namespace sinks = boost::log::sinks;
 
@@ -107,56 +161,6 @@ struct Mongo
 
 // @todo seb put all define as const char* in a namespace
 
-namespace Constants
-{
-/**
- * @namespace Mongo
- * @brief Contains constant string literals used for MongoDB database and field names.
- *
- * This namespace provides a collection of constant string literals that represent
- * database names and variable/field names commonly used in MongoDB operations.
- *
- */
-namespace Mongo
-{
-constexpr const char* EDITING_DB      = "Editing";
-constexpr const char* MEASUREMENTS_DB = "Measurements";
-constexpr const char* STATE_DB        = "State";
-constexpr const char* STATES_DB       = "States";  ///@todo are STATE_DB and STATES_DB the same?
-constexpr const char* CONFIG_DB       = "Config";
-constexpr const char* TRACE_DB        = "Trace";
-constexpr const char* GEOMETRY_DB     = "Geometry";
-constexpr const char* CONTENT_DB      = "Content";
-
-constexpr const char* DX_VAR        = "dx";
-constexpr const char* NUM_VAR       = "Num";
-constexpr const char* X_VAR         = "x";
-constexpr const char* SIGMA_VAR     = "sigma";
-constexpr const char* COVAR_VAR     = "Covar";
-constexpr const char* AZIMUTH_VAR   = "Azimuth";
-constexpr const char* ELEVATION_VAR = "Elevation";
-constexpr const char* NADIR_VAR     = "Nadir";
-constexpr const char* SERIES_VAR    = "Series";
-constexpr const char* EPOCH_VAR     = "Epoch";
-constexpr const char* SAT_VAR       = "Sat";
-constexpr const char* STR_VAR       = "Site";
-constexpr const char* TYPE_VAR      = "Type";
-constexpr const char* VALUE_VAR     = "Values";
-
-};  // namespace Mongo
-};  // namespace Constants
-
-/**
- * @brief Converts a C-style string (const char*) to a std::string.
- *
- * @param cstr A pointer to a null-terminated C-style string.
- * @return A std::string object containing the same characters as the input C-style string.
- */
-inline std::string toString(const char* cstr)
-{
-    return std::string(cstr);
-}
-
 b_date bDate(const GTime& time);
 
 struct MongoLogSinkBackend
@@ -196,3 +200,51 @@ extern array<Mongo*, 3> mongo_ptr_arr;
 #define MONGO_NOT_INITIALISED_MESSAGE                                                              \
     BOOST_LOG_TRIVIAL(warning) << "Mongo actions requested but mongo is not available - check it " \
                                   "is enabled and connected correctly"
+
+#else  // !ENABLE_MONGODB
+
+// Stub declarations when MongoDB is disabled
+#include <string>
+#include <vector>
+#include "common/enums.h"
+
+struct GTime;
+struct DBEntry;
+
+namespace boost
+{
+namespace posix_time
+{
+class ptime;
+}
+}  // namespace boost
+
+// Stub function declarations
+inline void mongoooo() {}
+
+inline std::vector<E_Mongo> mongoInstances(E_Mongo selection)
+{
+    return {};
+}
+
+inline bool startNewMongoDb(
+    const std::string&       id,
+    boost::posix_time::ptime logptime,
+    std::string              new_database,
+    E_Mongo                  instance
+)
+{
+    return false;
+}
+
+inline std::string formatSeries(std::string series)
+{
+    return series;
+}
+
+#define MONGO_NOT_INITIALISED_MESSAGE \
+    BOOST_LOG_TRIVIAL(                \
+        warning                       \
+    ) << "MongoDB support is not compiled in - rebuild with ENABLE_MONGODB=ON"
+
+#endif  // ENABLE_MONGODB

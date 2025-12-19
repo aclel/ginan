@@ -27,7 +27,7 @@ using std::vector;
 
 void outputApriori(ReceiverMap& receiverMap)
 {
-    if (acsConfig.mongoOpts.output_states == +E_Mongo::NONE)
+    if (acsConfig.mongoOpts.output_states == E_Mongo::NONE)
     {
         return;
     }
@@ -288,10 +288,8 @@ void selectAprioriSource(SatSys& Sat, GTime& time, KFState& kfState, KFState* re
     auto clkModelSources = satOpts.clockModel.sources;
 
     // remove kalman from the list to not corrupt the apriori states
-    auto posSource_it =
-        std::find(posModelSources.begin(), posModelSources.end(), +E_Source::KALMAN);
-    auto clkSource_it =
-        std::find(clkModelSources.begin(), clkModelSources.end(), +E_Source::KALMAN);
+    auto posSource_it = std::find(posModelSources.begin(), posModelSources.end(), E_Source::KALMAN);
+    auto clkSource_it = std::find(clkModelSources.begin(), clkModelSources.end(), E_Source::KALMAN);
 
     if (posSource_it != posModelSources.end())
     {
@@ -330,7 +328,7 @@ void selectAprioriSource(SatSys& Sat, GTime& time, KFState& kfState, KFState* re
             trace,
             "\nSelecting apriori pos (ECI) at %s, found %-10s: [%f, %f, %f]",
             time.to_string(),
-            satPos0.posSource._to_string(),
+            enum_to_string(satPos0.posSource).c_str(),
             satNav.aprioriPos.x(),
             satNav.aprioriPos.x(),
             satNav.aprioriPos.x()
@@ -352,7 +350,7 @@ void selectAprioriSource(SatSys& Sat, GTime& time, KFState& kfState, KFState* re
             trace,
             "\nSelecting apriori clk (m)   at %s, found %-10s: %f",
             time.to_string(),
-            satPos0.clkSource._to_string(),
+            enum_to_string(satPos0.clkSource).c_str(),
             satNav.aprioriClk * CLIGHT
         );
     }
@@ -417,10 +415,11 @@ void updateAprioriRecPos(
                     kfKey.str  = rec.id;
                     kfKey.num  = i;
 
-                    found &= remote_ptr->getKFValue(kfKey, rec.aprioriPos(i));
+                    found = found &&
+                            (remote_ptr->getKFValue(kfKey, rec.aprioriPos(i)) != E_Source::NONE);
                 }
 
-                if (found == false)
+                if (!found)
                 {
                     continue;
                 }
@@ -454,7 +453,7 @@ void updateAprioriRecPos(
             default:
             {
                 BOOST_LOG_TRIVIAL(warning)
-                    << "Unknown receiver apriori position source found: " << source._to_string();
+                    << "Unknown receiver apriori position source found: " << enum_to_string(source);
 
                 continue;
             }
@@ -464,7 +463,7 @@ void updateAprioriRecPos(
         break;
     }
 
-    if (foundSource == +E_Source::NONE)
+    if (foundSource == E_Source::NONE)
     {
         BOOST_LOG_TRIVIAL(warning) << "No receiver apriori position found for " << rec.id;
     }
@@ -473,7 +472,7 @@ void updateAprioriRecPos(
         4,
         trace,
         "\nUsing %s as source for receiver apriori position: %f %f %f",
-        foundSource._to_string(),
+        enum_to_string(foundSource),
         rec.aprioriPos.x(),
         rec.aprioriPos.y(),
         rec.aprioriPos.z()
@@ -512,7 +511,7 @@ void updateAprioriRecClk(
             case E_Source::KALMAN:
             case E_Source::REMOTE:
             {
-                if (source == +E_Source::REMOTE && remote_ptr == nullptr)
+                if (source == E_Source::REMOTE && remote_ptr == nullptr)
                     continue;
 
                 E_Source found;
@@ -523,7 +522,7 @@ void updateAprioriRecClk(
 
                     double dummy;
 
-                    if (source == +E_Source::KALMAN)
+                    if (source == E_Source::KALMAN)
                         found = kfState.getKFValue(
                             kfKey,
                             rec.aprioriClk,
@@ -531,7 +530,7 @@ void updateAprioriRecClk(
                             &dummy,
                             false
                         );
-                    if (source == +E_Source::REMOTE)
+                    if (source == E_Source::REMOTE)
                         found = remote_ptr->getKFValue(
                             kfKey,
                             rec.aprioriClk,
@@ -541,7 +540,7 @@ void updateAprioriRecClk(
                         );
                 }
 
-                if (found == false)
+                if (found == E_Source::NONE)
                 {
                     continue;
                 }
@@ -568,7 +567,7 @@ void updateAprioriRecClk(
             default:
             {
                 BOOST_LOG_TRIVIAL(warning)
-                    << "Unknown receiver apriori clock source found: " << source._to_string();
+                    << "Unknown receiver apriori clock source found: " << enum_to_string(source);
                 continue;
             }
         }
@@ -577,7 +576,7 @@ void updateAprioriRecClk(
         break;
     }
 
-    if (foundSource == +E_Source::NONE)
+    if (foundSource == E_Source::NONE)
     {
         BOOST_LOG_TRIVIAL(warning) << "No receiver apriori clock found for " << rec.id;
     }
@@ -586,7 +585,7 @@ void updateAprioriRecClk(
         4,
         trace,
         "\nUsing %s as source for receiver apriori clock: %f",
-        foundSource._to_string(),
+        enum_to_string(foundSource),
         rec.aprioriClk
     );
 }
@@ -814,11 +813,11 @@ void removeBadAmbiguities(
 
             if (acsConfig.process_ppp)
             {
-                E_ObsCode obsCode = E_ObsCode::_from_integral(key.num);
+                E_ObsCode obsCode = int_to_enum<E_ObsCode>(key.num);
                 E_FType   ft      = code2Freq[key.Sat.sys][obsCode];
 
                 preprocSigName = ft2string(ft);
-                sigName        = obsCode._to_string();
+                sigName        = enum_to_string(obsCode);
             }
             else
             {
@@ -1106,7 +1105,7 @@ void updateSppPppClkOffsets(ReceiverMap& receiverMap, KFState& kfState)
             continue;
         }
 
-        if (rec.sol.status != +E_Solution::SINGLE)
+        if (rec.sol.status != E_Solution::SINGLE)
         {
             continue;
         }
@@ -1127,9 +1126,9 @@ void updateSppPppClkOffsets(ReceiverMap& receiverMap, KFState& kfState)
         clkKey.rec_ptr = &rec;
 
         double   recClk_m = 0;
-        E_Source found    = kfState.getKFValue(clkKey, recClk_m);
+        E_Source foundSrc = kfState.getKFValue(clkKey, recClk_m);
 
-        if (found)
+        if (foundSrc != E_Source::NONE)
         {
             rec.sol.sppPppClkOffset =
                 recClk_m - rec.sol.sppClk;  // Save SPP to PPP clock offset for next epoch
@@ -1295,7 +1294,7 @@ double netResidualAndChainOutputs(Trace& trace, Observation& obs, KFMeasEntry& m
             tracepdeex(0, trace, "\n");
             tracepdeex(4, trace, "%s", obs.time.to_string());
             tracepdeex(3, trace, "%30s", ((string)measEntry.obsKey).c_str());
-            tracepdeex(0, trace, " %-23s %+14.4f", component._to_string(), -componentVal);
+            tracepdeex(0, trace, " %-23s %+14.4f", enum_to_string(component), -componentVal);
 
             if (var >= 0)
                 tracepdeex(2, trace, " ~ %5.3e", var);
@@ -1315,12 +1314,12 @@ double netResidualAndChainOutputs(Trace& trace, Observation& obs, KFMeasEntry& m
 
         if (var > 100)
         {
-            BOOST_LOG_TRIVIAL(warning) << "Unestimated component '" << component._to_string()
+            BOOST_LOG_TRIVIAL(warning) << "Unestimated component '" << enum_to_string(component)
                                        << "' for '" << measEntry.obsKey << "' has large variance ("
                                        << var << "), valid inputs may not (yet) be available";
 
             trace << "\n"
-                  << "Warning: Unestimated component '" << component._to_string() << "' for '"
+                  << "Warning: Unestimated component '" << enum_to_string(component) << "' for '"
                   << measEntry.obsKey << "' has large variance (" << var
                   << "), valid inputs may not (yet) be available";
         }

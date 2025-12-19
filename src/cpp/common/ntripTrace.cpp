@@ -1,15 +1,12 @@
 // #pragma GCC optimize ("O0")
 
 #include "common/ntripTrace.hpp"
-#include <bsoncxx/builder/basic/document.hpp>
-#include <bsoncxx/json.hpp>
+#include <boost/json.hpp>
 #include <chrono>
 #include <string>
 #include "common/acsConfig.hpp"
 #include "common/common.hpp"
 
-using bsoncxx::builder::basic::kvp;
-using bsoncxx::types::b_date;
 using std::string;
 using std::chrono::system_clock;
 using std::chrono::time_point;
@@ -30,15 +27,15 @@ void NetworkStatistics::onErrorStatistics(const boost::system::error_code& err, 
 
     connectCount++;
 
-    bsoncxx::builder::basic::document doc = {};
-    doc.append(kvp("StreamName", streamName));
-    doc.append(kvp("MessageType", "Error"));
-    doc.append(kvp("BoostSysErrCode", err.value()));
-    doc.append(kvp("Error", err.message()));
-    doc.append(kvp("SocketOperation", operation));
-    doc.append(kvp("Time", b_date{std::chrono::system_clock::now()}));
+    boost::json::object doc = {};
+    doc["StreamName"]       = streamName;
+    doc["MessageType"]      = "Error";
+    doc["BoostSysErrCode"]  = err.value();
+    doc["Error"]            = err.message();
+    doc["SocketOperation"]  = operation;
+    doc["Time"]             = timeGet().to_string();
 
-    fout << bsoncxx::to_json(doc) << "\n";
+    fout << boost::json::serialize(doc) << "\n";
 }
 
 void NetworkStatistics::onConnectedStatistics()
@@ -57,14 +54,14 @@ void NetworkStatistics::onConnectedStatistics()
 
     connectCount++;
 
-    bsoncxx::builder::basic::document doc = {};
-    doc.append(kvp("StreamName", streamName));
-    doc.append(kvp("MessageType", "Connected"));
-    doc.append(kvp("Time", b_date{std::chrono::system_clock::now()}));
-    doc.append(kvp("ConnectCount", connectCount));
-    doc.append(kvp("DisonnectCount", disconnectCount));
+    boost::json::object doc = {};
+    doc["StreamName"]       = streamName;
+    doc["MessageType"]      = "Connected";
+    doc["Time"]             = timeGet().to_string();
+    doc["ConnectCount"]     = connectCount;
+    doc["DisonnectCount"]   = disconnectCount;
 
-    fout << bsoncxx::to_json(doc) << "\n";
+    fout << boost::json::serialize(doc) << "\n";
 }
 
 void NetworkStatistics::onDisconnectedStatistics()
@@ -83,14 +80,14 @@ void NetworkStatistics::onDisconnectedStatistics()
 
     disconnectCount++;
 
-    bsoncxx::builder::basic::document doc = {};
-    doc.append(kvp("StreamName", streamName));
-    doc.append(kvp("MessageType", "Disconnected"));
-    doc.append(kvp("Time", b_date{std::chrono::system_clock::now()}));
-    doc.append(kvp("ConnectCount", connectCount));
-    doc.append(kvp("DisonnectCount", disconnectCount));
+    boost::json::object doc = {};
+    doc["StreamName"]       = streamName;
+    doc["MessageType"]      = "Disconnected";
+    doc["Time"]             = timeGet().to_string();
+    doc["ConnectCount"]     = connectCount;
+    doc["DisonnectCount"]   = disconnectCount;
 
-    fout << bsoncxx::to_json(doc) << "\n";
+    fout << boost::json::serialize(doc) << "\n";
 }
 
 void NetworkStatistics::onChunkSentStatistics()
@@ -109,13 +106,13 @@ void NetworkStatistics::onChunkSentStatistics()
 
     chunksSent++;
 
-    bsoncxx::builder::basic::document doc = {};
-    doc.append(kvp("StreamName", streamName));
-    doc.append(kvp("MessageType", "ChunkSent"));
-    doc.append(kvp("Time", b_date{std::chrono::system_clock::now()}));
-    doc.append(kvp("ChunksSent", chunksSent));
+    boost::json::object doc = {};
+    doc["StreamName"]       = streamName;
+    doc["MessageType"]      = "ChunkSent";
+    doc["Time"]             = timeGet().to_string();
+    doc["ChunksSent"]       = chunksSent;
 
-    fout << bsoncxx::to_json(doc) << "\n";
+    fout << boost::json::serialize(doc) << "\n";
 }
 
 void NetworkStatistics::onChunkReceivedStatistics()
@@ -137,27 +134,27 @@ void NetworkStatistics::onChunkReceivedStatistics()
 
     chunksReceived++;
 
-    bsoncxx::builder::basic::document doc = {};
-    doc.append(kvp("StreamName", streamName));
-    doc.append(kvp("MessageType", "ChunkReceived"));
-    doc.append(kvp("Time", b_date{std::chrono::system_clock::now()}));
-    doc.append(kvp("ChunksReceived", chunksReceived));
+    boost::json::object doc = {};
+    doc["StreamName"]       = streamName;
+    doc["MessageType"]      = "ChunkReceived";
+    doc["Time"]             = timeGet().to_string();
+    doc["ChunksReceived"]   = chunksReceived;
 
-    fout << bsoncxx::to_json(doc) << "\n";
+    fout << boost::json::serialize(doc) << "\n";
 }
 
 string NetworkStatistics::getNetworkStatistics(GTime now, string label)
 {
-    bsoncxx::builder::basic::document doc = {};
+    boost::json::object doc = {};
 
-    doc.append(kvp("label", label));
-    doc.append(kvp("Stream", streamName));
+    doc["label"]  = label;
+    doc["Stream"] = streamName;
     // 	doc.append(kvp("Epoch", 			std::put_time(std::localtime(&now.time),		"%F
     // %X"))); 	doc.append(kvp("Start", 			std::put_time(std::localtime(&startTime.time),
     // "%F %X"))); 	doc.append(kvp("Finish", 			std::put_time(std::localtime(&endTime.time),
     // "%F %X")));
-    doc.append(kvp("Network", acsConfig.analysis_agency));
-    doc.append(kvp("Downloading", true));
+    doc["Network"]     = acsConfig.analysis_agency;
+    doc["Downloading"] = true;
 
     double totalTime = (timeGet() - startTime).to_double();
 
@@ -182,20 +179,20 @@ string NetworkStatistics::getNetworkStatistics(GTime now, string label)
     // 		meanReconn = (double)disconnectedDuration.total_milliseconds() / (60.0 * 1000.0 *
     // disconnectionCount);
     //
-    // 	doc.append(kvp("Disconnects", 		disconnectionCount));
-    // 	doc.append(kvp("MeanDowntime", 		meanReconn));
-    // 	doc.append(kvp("ConnectedRatio", 	connRatio));
+    // 	doc["Disconnects"] = 		disconnectionCount;
+    // 	doc["MeanDowntime"] = 		meanReconn;
+    // 	doc["ConnectedRatio"] = 	connRatio;
 
     // 	double chunkRatio = 0;
     //
     // 	if (numberChunks != 0)
     // 		chunkRatio = (double)numberErroredChunks / (double)(numberChunks);
     //
-    // 	doc.append(kvp("Chunks", 			numberChunks));
-    // 	doc.append(kvp("ChunkErrors", 		numberErroredChunks));
+    // 	doc["Chunks"] = 			numberChunks;
+    // 	doc["ChunkErrors"] = 		numberErroredChunks;
     // 	doc.append(kvp("ChunkErrorRatio",	chunkRatio));
 
-    return bsoncxx::to_json(doc);
+    return boost::json::serialize(doc);
 }
 
 // void NetworkStatistics::printNetworkStatistics(

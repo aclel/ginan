@@ -22,7 +22,7 @@ void updateLamMap(const GTime& time, SatPos& satPos)
 
     auto& lamMap = satPos.satNav_ptr->lamMap;
 
-    if (sys == +E_Sys::GLO)
+    if (sys == E_Sys::GLO)
     {
         int freqNum = 100;
 
@@ -72,7 +72,7 @@ void updateLamMap(const GTime& time, SatPos& satPos)
         lamMap[F7] = CLIGHT / FREQ7; /* E5b/B2/B2b */
         lamMap[F8] = CLIGHT / FREQ8; /* E5a+b/B2a+b */
 
-        if (sys == +E_Sys::BDS)
+        if (sys == E_Sys::BDS)
         {
             lamMap[B1] = CLIGHT / FREQ1_CMP; /* B2-1 */
             lamMap[B3] = CLIGHT / FREQ3_CMP; /* B3 */

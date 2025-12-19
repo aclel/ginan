@@ -46,9 +46,9 @@ vector<E_Mongo> mongoInstances(E_Mongo selection)
 {
     vector<E_Mongo> instances;
 
-    if (selection == +E_Mongo::PRIMARY || selection == +E_Mongo::BOTH)
+    if (selection == E_Mongo::PRIMARY || selection == E_Mongo::BOTH)
         instances.push_back(E_Mongo::PRIMARY);
-    if (selection == +E_Mongo::SECONDARY || selection == +E_Mongo::BOTH)
+    if (selection == E_Mongo::SECONDARY || selection == E_Mongo::BOTH)
         instances.push_back(E_Mongo::SECONDARY);
 
     return instances;
@@ -56,7 +56,7 @@ vector<E_Mongo> mongoInstances(E_Mongo selection)
 
 void newMongoDatabase(E_Mongo instance)
 {
-    auto mongo_ptr = mongo_ptr_arr[instance];
+    auto mongo_ptr = mongo_ptr_arr[static_cast<size_t>(instance)];
 
     if (mongo_ptr == nullptr)
     {
@@ -66,7 +66,7 @@ void newMongoDatabase(E_Mongo instance)
 
     auto& mongo = *mongo_ptr;
 
-    auto& config = acsConfig.mongoOpts[instance];
+    auto& config = acsConfig.mongoOpts[static_cast<size_t>(instance)];
 
     getMongoCollection(mongo, "Content");
 
@@ -141,7 +141,7 @@ bool startNewMongoDb(
     E_Mongo                  instance
 )
 {
-    auto& mongo_ptr = mongo_ptr_arr[instance];
+    auto& mongo_ptr = mongo_ptr_arr[static_cast<size_t>(instance)];
 
     if (mongo_ptr == nullptr)
     {
@@ -176,12 +176,12 @@ void mongoooo()
 
     for (auto instance : instances)
     {
-        auto& mongo_ptr = mongo_ptr_arr[instance];
+        auto& mongo_ptr = mongo_ptr_arr[static_cast<size_t>(instance)];
 
         if (mongo_ptr)
             continue;
 
-        auto& config = acsConfig.mongoOpts[instance];
+        auto& config = acsConfig.mongoOpts[static_cast<size_t>(instance)];
 
         try
         {
@@ -210,7 +210,7 @@ void MongoLogSinkBackend::consume(
 {
     for (auto instance : {E_Mongo::PRIMARY, E_Mongo::SECONDARY})
     {
-        auto mongo_ptr = mongo_ptr_arr[instance];
+        auto mongo_ptr = mongo_ptr_arr[static_cast<size_t>(instance)];
 
         if (mongo_ptr == nullptr)
             continue;

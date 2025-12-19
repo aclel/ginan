@@ -3,12 +3,12 @@
 #include <map>
 #include <string>
 #include "common/rinexObsWrite.hpp"
+#include "enums.h"
 
 using std::map;
 using std::string;
 
 struct GTime;
-class E_Source;
 struct KFState;
 
 /** File editing information for ORBEX writing

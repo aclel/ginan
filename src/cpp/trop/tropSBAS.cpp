@@ -72,15 +72,18 @@ double tropSBAS(
         met[i] -= met[i + 5] * c;
     }
     dryZTD = 1E-6 * k1 * rd * met[0] / gm;
-    wetZTD = 1E-6 * k2 * rd / (gm * (met[4] + 1) - met[3] * rd) * met[2] / met[1];
+    wetZTD = 1E-6 * k2 * rd * met[2] / (gm * (met[4] + 1) - met[3] * rd) / met[1];
 
     double h = pos.hgt();
     dryZTD *= pow(1 - met[3] * h / met[1], g / (rd * met[3]));
     wetZTD *= pow(1 - met[3] * h / met[1], (met[4] + 1) * g / (rd * met[3]) - 1);
 
-    double sinel = sin(elev);
-    dryMap       = 1.001 / sqrt(0.002001 + sinel * sinel);
-    dryMap       = wetMap;
-    var          = SQR(0.12 * dryMap);
+    double sinel   = sin(elev);
+    dryMap         = 1.001 / sqrt(0.002001 + sinel * sinel);
+    double elevDeg = elev * R2D;
+    if (elevDeg < 4)
+        dryMap *= 1.0 + 0.015 * SQR(4 - elevDeg);
+    wetMap = dryMap;
+    var    = SQR(0.12 * dryMap);
     return (dryZTD + wetZTD) * dryMap;
 }

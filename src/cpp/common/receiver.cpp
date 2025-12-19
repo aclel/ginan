@@ -1,9 +1,9 @@
 #include "common/receiver.hpp"
+#include <set>
 #include "common/sinex.hpp"
+#include "common/streamParser.hpp"
 #include "common/streamRinex.hpp"
 #include "common/streamRtcm.hpp"
-#include "common/streamParser.hpp"
-#include <set>
 
 SinexSiteId   dummySiteid;
 SinexReceiver dummyReceiver;
@@ -30,7 +30,7 @@ void extractTrackedSignals(Receiver& rec, Parser& parser, ObsList* obsList)
             vector<E_ObsCode> signals;
             for (auto& [idx, codeType] : codeTypeMap)
             {
-                if (codeType.code != +E_ObsCode::NONE)
+                if (codeType.code != E_ObsCode::NONE)
                 {
                     signals.push_back(codeType.code);
                 }
@@ -46,7 +46,7 @@ void extractTrackedSignals(Receiver& rec, Parser& parser, ObsList* obsList)
         // Extract signals from the provided observation list
         for (auto& obs : only<GObs>(*obsList))
         {
-            E_Sys sys = obs.Sat.sys;
+            E_Sys          sys = obs.Sat.sys;
             set<E_ObsCode> signalSet;
 
             // If we already have signals for this system, start with those
@@ -60,7 +60,7 @@ void extractTrackedSignals(Receiver& rec, Parser& parser, ObsList* obsList)
             {
                 for (auto& sig : sigsList)
                 {
-                    if (sig.code != +E_ObsCode::NONE)
+                    if (sig.code != E_ObsCode::NONE)
                     {
                         signalSet.insert(sig.code);
                     }

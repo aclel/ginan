@@ -91,7 +91,7 @@ int configIonModelSphhar(Trace& trace)
             basis.layer,
             basis.order,
             basis.degree,
-            basis.trigType._to_string()
+            enum_to_string(basis.trigType)
         );
     tracepdeex(2, trace, "\n");
 
@@ -194,9 +194,9 @@ double ionCoefSphhar(
 
     double angle = basis.order * obs.ippMap[basis.layer].lonDeg * D2R;
 
-    if (basis.trigType == +E_TrigType::SIN)
+    if (basis.trigType == E_TrigType::SIN)
         coeff *= sin(angle);
-    else if (basis.trigType == +E_TrigType::COS)
+    else if (basis.trigType == E_TrigType::COS)
         coeff *= cos(angle);
 
     if (slant)
@@ -291,7 +291,7 @@ void ionOutputSphcal(Trace& trace, KFState& kfState)
                 atmGlob.layers[basis.layer].height,
                 basis.order,
                 basis.degree,
-                basis.trigType._to_string(),
+                enum_to_string(basis.trigType),
                 ionoRecord.value,
                 sqrt(ionoRecord.variance)
             );

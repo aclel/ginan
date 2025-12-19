@@ -36,17 +36,17 @@ bool deweightMeas(RejectCallbackDetails rejectDetails)
     double residual = 0;
 
     string description;
-    if (stage == +E_FilterStage::LSQ)
+    if (stage == E_FilterStage::LSQ)
     {
         description = "Least Squares";
         residual    = kfMeas.VV(measIndex);
     }
-    else if (stage == +E_FilterStage::PREFIT)
+    else if (stage == E_FilterStage::PREFIT)
     {
         description = "Prefit";
         residual    = kfMeas.V(measIndex);
     }
-    else if (stage == +E_FilterStage::POSTFIT)
+    else if (stage == E_FilterStage::POSTFIT)
     {
         description = "Postfit";
         residual    = kfMeas.VV(measIndex);
@@ -150,15 +150,15 @@ bool deweightStationMeas(RejectCallbackDetails rejectDetails)
         double deweightFactor = acsConfig.measErrors.deweight_factor;
 
         string description;
-        if (stage == +E_FilterStage::LSQ)
+        if (stage == E_FilterStage::LSQ)
         {
             description = "Least Squares";
         }
-        else if (stage == +E_FilterStage::PREFIT)
+        else if (stage == E_FilterStage::PREFIT)
         {
             description = "Prefit";
         }
-        else if (stage == +E_FilterStage::POSTFIT)
+        else if (stage == E_FilterStage::POSTFIT)
         {
             description = "Postfit";
         }
@@ -603,11 +603,11 @@ bool relaxState(RejectCallbackDetails rejectDetails)
     }
 
     double deweightFactor = 1;
-    if (stage == +E_FilterStage::PREFIT)
+    if (stage == E_FilterStage::PREFIT)
     {
         deweightFactor = abs(kfState.prefitRatios(stateIndex));
     }
-    else if (stage == +E_FilterStage::POSTFIT)
+    else if (stage == E_FilterStage::POSTFIT)
     {
         deweightFactor = abs(kfState.postfitRatios(stateIndex));
     }

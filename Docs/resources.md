@@ -10,7 +10,7 @@
 
 > [![](images/GinanWorkshopS.png) Slides from the Ginan Workshop hosted at the IGNSS 2024 conference.](resources/Ginan_Workshop_Slides_-_IGNSS_2024.pdf)
 
-> [![](images/GinanWorkshop2025WindowsSetUp-TN2.png) Set-up Guide for Windows Users from 2025 Geodesy Workshop at ANU.](resources/resources/Ginan-Workshop--Windows-Set-up--2025-06-23.pdf)
+> [![](images/GinanWorkshop2025WindowsSetUp-TN2.png) Set-up Guide for Windows Users from 2025 Geodesy Workshop at ANU.](resources/Ginan-Workshop--Windows-Set-up--2025-06-23.pdf)
 
 > [![](images/GinanWorkshop1.png) Set Up Guide for the Ginan 2024 Workshop.](resources/Ginan_Workshop_1_Set-up_Guide_-_IGNSS_2024_-_6_Feb.pdf)
 

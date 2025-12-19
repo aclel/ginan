@@ -45,13 +45,17 @@ string ginanBoostVersion()
 
 string ginanOsName()
 {
-#ifdef _WIN32
-
-    return "Windows 32-bit";
-
-#elif _WIN64
-
-    return "Windows 64-bit";
+#if defined(_WIN32) || defined(_WIN64)
+    // Under MSVC/MinGW, _WIN32 is defined for both 32-bit and 64-bit.
+    // Use pointer size to determine bitness robustly (works under Wine too).
+    if (sizeof(void*) == 8)
+    {
+        return "Windows 64-bit";
+    }
+    else
+    {
+        return "Windows 32-bit";
+    }
 
 #elif __APPLE__ || __MACH__
 
@@ -107,7 +111,7 @@ string ginanOsName()
 
     return productName + " " + productVersion;
 
-#elif __linux__
+#elif defined(__linux__)
 
     std::ifstream fileStream("/etc/os-release");
     if (!fileStream)

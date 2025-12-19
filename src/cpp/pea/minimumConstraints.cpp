@@ -234,9 +234,10 @@ void mincon(
     if (kfStateTrans.id != "MINIMUM")
     {
         kfStateTrans.FilterOptions::operator=(acsConfig.minconOpts);
-        kfStateTrans.id                      = "MINIMUM";
-        kfStateTrans.output_residuals        = acsConfig.output_residuals;
-        kfStateTrans.outputMongoMeasurements = acsConfig.mongoOpts.output_measurements;
+        kfStateTrans.id               = "MINIMUM";
+        kfStateTrans.output_residuals = acsConfig.output_residuals;
+        kfStateTrans.outputMongoMeasurements =
+            (acsConfig.mongoOpts.output_measurements != E_Mongo::NONE);
 
         kfStateTrans.measRejectCallbacks.push_back(deweightStationMeas);
     }
@@ -293,7 +294,7 @@ void mincon(
         Matrix3d filterVar     = Matrix3d::Zero();
         string   str;
 
-        if (key.type == +KF::REC_POS)
+        if (key.type == KF::REC_POS)
         {
             if (key.rec_ptr == nullptr)
             {
@@ -313,7 +314,7 @@ void mincon(
 
             hasStations = true;
         }
-        else if (key.type == +KF::ORBIT)
+        else if (key.type == KF::ORBIT)
         {
             auto& satNav = nav.satNavMap[key.Sat];
 
@@ -374,7 +375,7 @@ void mincon(
             kfStateStations.getKFValue(kfKey, filterPos(i));
         }
 
-        if (key.type == +KF::ORBIT)
+        if (key.type == KF::ORBIT)
             for (int i = 0; i < 3; i++)
             {
                 KFKey kfKey = key;
@@ -390,7 +391,7 @@ void mincon(
         Vector3d dRdThetaY;
         Vector3d dRdThetaZ;
 
-        if (key.type == +KF::REC_POS)
+        if (key.type == KF::REC_POS)
         {
             dRdX      = xUnitEcef;
             dRdY      = yUnitEcef;
@@ -400,7 +401,7 @@ void mincon(
             dRdThetaY = aprioriPos.cross(yUnitEcef);
             dRdThetaZ = aprioriPos.cross(zUnitEcef);
         }
-        else if (key.type == +KF::ORBIT)
+        else if (key.type == KF::ORBIT)
         {
             dRdX      = xUnitEci;
             dRdY      = yUnitEci;
@@ -430,7 +431,10 @@ void mincon(
                 return;
 
             KFKey rateKey = key;
-            rateKey.type += KF::XFORM_XLATE_RATE - KF::XFORM_XLATE;
+            rateKey.type  = static_cast<KF>(
+                static_cast<int>(rateKey.type) +
+                (static_cast<int>(KF::XFORM_XLATE_RATE) - static_cast<int>(KF::XFORM_XLATE))
+            );
             rateKey.comment += "/DAY";
 
             kfStateTrans.setKFTransRate(key, rateKey, 1 / S_IN_DAY, rateInit);
@@ -967,7 +971,7 @@ void mincon(
 
         for (auto& [key, index] : kfStateTrans.kfIndexMap)
         {
-            if (key.type == +KF::ONE)
+            if (key.type == KF::ONE)
                 continue;
 
             char line[128];
@@ -975,7 +979,7 @@ void mincon(
                 line,
                 sizeof(line),
                 " Minimum Constraints Transform: %12s:%c %+9f %6s +- %8f",
-                KF::_from_integral(key.type)._to_string(),
+                enum_to_string(key.type).c_str(),
                 'X' + key.num,  // Eugene: convert num to code?
                 kfStateTrans.x(index),
                 key.comment.c_str(),
@@ -1027,7 +1031,7 @@ KFState minconOnly(Trace& trace, ReceiverMap& receiverMap)
 {
     long int       startPos = -1;
     E_SerialObject type     = getFilterTypeFromFile(startPos, acsConfig.mincon_filename);
-    if (type != +E_SerialObject::FILTER_PLUS)
+    if (type != E_SerialObject::FILTER_PLUS)
     {
         return KFState();
     }

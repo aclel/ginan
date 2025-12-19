@@ -195,13 +195,13 @@ void createTracefiles(ReceiverMap& receiverMap, Network& pppNet, Network& ionNet
     startNewMongoDb(
         "PRIMARY",
         logptime,
-        acsConfig.mongoOpts[E_Mongo::PRIMARY].database,
+        acsConfig.mongoOpts[static_cast<size_t>(E_Mongo::PRIMARY)].database,
         E_Mongo::PRIMARY
     );
     startNewMongoDb(
         "SECONDARY",
         logptime,
-        acsConfig.mongoOpts[E_Mongo::SECONDARY].database,
+        acsConfig.mongoOpts[static_cast<size_t>(E_Mongo::SECONDARY)].database,
         E_Mongo::SECONDARY
     );
 
@@ -346,6 +346,17 @@ void createTracefiles(ReceiverMap& receiverMap, Network& pppNet, Network& ionNet
                     logptime,
                     insertSuffix(acsConfig.pos_filename, suff),
                     pppNet.kfState.metaDataMap[POS_FILENAME_STR + id + metaSuff]
+                );
+            }
+
+            if (acsConfig.output_spp && rts == false)
+            {
+                newTraceFile |= createNewTraceFile(
+                    id,
+                    rec.source,
+                    logptime,
+                    acsConfig.spp_filename,
+                    rec.sppOutputFile
                 );
             }
         }
@@ -680,7 +691,7 @@ void createTracefiles(ReceiverMap& receiverMap, Network& pppNet, Network& ionNet
 
 void outputPredictedStates(Trace& trace, KFState& kfState)
 {
-    if (acsConfig.mongoOpts.output_predictions == +E_Mongo::NONE)
+    if (acsConfig.mongoOpts.output_predictions == E_Mongo::NONE)
     {
         return;
     }
@@ -721,7 +732,7 @@ void outputPredictedStates(Trace& trace, KFState& kfState)
             // remove orbits because they're done separately
             for (auto& [kfKey, index] : copyState.kfIndexMap)
             {
-                if (kfKey.type == +KF::ORBIT)
+                if (kfKey.type == KF::ORBIT)
                 {
                     copyState.removeState(kfKey);
                 }
@@ -731,8 +742,8 @@ void outputPredictedStates(Trace& trace, KFState& kfState)
 
             auto sent_predictions = acsConfig.mongoOpts.sent_predictions;
 
-            auto orbitIt = std::find(sent_predictions.begin(), sent_predictions.end(), +KF::ORBIT);
-            auto allIt   = std::find(sent_predictions.begin(), sent_predictions.end(), +KF::ALL);
+            auto orbitIt = std::find(sent_predictions.begin(), sent_predictions.end(), KF::ORBIT);
+            auto allIt   = std::find(sent_predictions.begin(), sent_predictions.end(), KF::ALL);
 
             bool doOrbits = orbitIt != sent_predictions.end();
             bool doAll    = allIt != sent_predictions.end();
@@ -928,14 +939,14 @@ void perEpochPostProcessingAndOutputs(
              .instances = acsConfig.mongoOpts.output_states,
              .queue     = acsConfig.mongoOpts.queue_outputs}
         );
-
-        kfState.outputStates(pppTrace, "/PPP" + _RTS);
+        if (acsConfig.output_network_trace)
+            kfState.outputStates(pppTrace, "/PPP" + _RTS);
     }
 
     nav.erp.filterValues = getErpFromFilter(kfState);
 
-    if (acsConfig.ionModelOpts.model &&
-        acsConfig.ssrOpts.atmosphere_sources.front() == +E_Source::KALMAN)
+    if (acsConfig.ionModelOpts.model != E_IonoModel::NONE &&
+        acsConfig.ssrOpts.atmosphere_sources.front() == E_Source::KALMAN)
     {
         auto ionTrace = getTraceFile(ionNet);
 
@@ -950,7 +961,7 @@ void perEpochPostProcessingAndOutputs(
 
         filterIonosphere(ionTrace, ionNet.kfState, receiverMap, time);
 
-        if (acsConfig.ssrOpts.atmosphere_sources.front() == +E_Source::KALMAN)
+        if (acsConfig.ssrOpts.atmosphere_sources.front() == E_Source::KALMAN)
         {
             ionosphereSsrUpdate(ionTrace, ionNet.kfState);
         }
@@ -1030,7 +1041,8 @@ void perEpochPostProcessingAndOutputs(
             arPossible = false;
         }
 
-        if (arPossible && acsConfig.ambrOpts.mode && acsConfig.ambrOpts.once_per_epoch)
+        if (arPossible && acsConfig.ambrOpts.mode != E_ARmode::OFF &&
+            acsConfig.ambrOpts.once_per_epoch)
         {
             KFState* arState_ptr;
 
@@ -1095,6 +1107,12 @@ void perEpochPostProcessingAndOutputs(
             }
         }
     }
+
+    if (acsConfig.process_spp && acsConfig.output_spp)
+        for (auto& [id, rec] : receiverMap)
+        {
+            writeSPP(rec.sppOutputFile, rec);
+        }
 
     if (1)
     {

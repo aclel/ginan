@@ -1,7 +1,7 @@
 #pragma once
 
 #include <boost/date_time/posix_time/posix_time.hpp>
-#include <bsoncxx/builder/basic/document.hpp>
+#include <boost/json.hpp>
 #include <chrono>
 #include <fstream>
 #include <iostream>
@@ -85,8 +85,8 @@ struct RtcmTrace
     void traceUnknown();
 };
 
-void traceBrdcEphBody(bsoncxx::builder::basic::document& doc, Eph& eph);
+void traceBrdcEphBody(boost::json::object& obj, Eph& eph);
 
-void traceBrdcEphBody(bsoncxx::builder::basic::document& doc, Geph& geph);
+void traceBrdcEphBody(boost::json::object& obj, Geph& geph);
 
 extern map<RtcmMessageType, E_Sys> rtcmMessageSystemMap;

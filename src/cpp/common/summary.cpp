@@ -81,7 +81,7 @@ void outputSummaries(
             else
                 trace << "  |  ";
 
-            trace << code._to_string() << " : " << count;
+            trace << enum_to_string(code) << " : " << count;
         }
 
         first = true;

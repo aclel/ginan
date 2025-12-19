@@ -35,7 +35,13 @@ Matrix3d rac2ecef(
 template <typename TYPE>
 void cullSSRMap(GTime time, TYPE& map)
 {
-    for (auto it = map.begin(); it != map.end();)
+    if (map.empty())
+    {
+        return;
+    }
+
+    for (auto it = std::next(map.begin());  // Always reserve the latest entry when culling
+         it != map.end();)
     {
         auto& [ssrtime, ssr] = *it;
 

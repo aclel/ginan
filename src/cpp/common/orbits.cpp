@@ -121,12 +121,12 @@ bool inertial2Keplers(Trace& trace, const VectorEci& r, const VectorEci& v, Vect
         return false;
     }
 
-    keplers(KEPLER::LX) = L_x;
-    keplers(KEPLER::LY) = L_y;
-    keplers(KEPLER::LZ) = L_z;
-    keplers(KEPLER::EU) = e_X;
-    keplers(KEPLER::EV) = e_Y;
-    keplers(KEPLER::M)  = M;
+    keplers(static_cast<int>(KEPLER::LX)) = L_x;
+    keplers(static_cast<int>(KEPLER::LY)) = L_y;
+    keplers(static_cast<int>(KEPLER::LZ)) = L_z;
+    keplers(static_cast<int>(KEPLER::EU)) = e_X;
+    keplers(static_cast<int>(KEPLER::EV)) = e_Y;
+    keplers(static_cast<int>(KEPLER::M))  = M;
 
     return true;
 }
@@ -136,12 +136,12 @@ VectorEci keplers2Inertial(Trace& trace, const Vector6d& keplers0)
     Vector3d L   = Vector3d::Zero();
     Vector2d eee = Vector2d::Zero();
 
-    L[0]     = keplers0[KEPLER::LX];
-    L[1]     = keplers0[KEPLER::LY];
-    L[2]     = keplers0[KEPLER::LZ];
-    eee[0]   = keplers0[KEPLER::EU];
-    eee[1]   = keplers0[KEPLER::EV];
-    double M = keplers0[KEPLER::M];
+    L[0]     = keplers0[static_cast<int>(KEPLER::LX)];
+    L[1]     = keplers0[static_cast<int>(KEPLER::LY)];
+    L[2]     = keplers0[static_cast<int>(KEPLER::LZ)];
+    eee[0]   = keplers0[static_cast<int>(KEPLER::EU)];
+    eee[1]   = keplers0[static_cast<int>(KEPLER::EV)];
+    double M = keplers0[static_cast<int>(KEPLER::M)];
 
     double e_ = eee.norm();
 
@@ -360,17 +360,22 @@ VectorEci propagateEllipse(
         return newPos;
     }
 
-    Vector3d L = Vector3d(keplers0[KEPLER::LX], keplers0[KEPLER::LY], keplers0[KEPLER::LZ]);
+    Vector3d L = Vector3d(
+        keplers0[static_cast<int>(KEPLER::LX)],
+        keplers0[static_cast<int>(KEPLER::LY)],
+        keplers0[static_cast<int>(KEPLER::LZ)]
+    );
 
     double h = L.norm();
 
-    Vector2d E = Vector2d(keplers0[KEPLER::EU], keplers0[KEPLER::EV]);
+    Vector2d E =
+        Vector2d(keplers0[static_cast<int>(KEPLER::EU)], keplers0[static_cast<int>(KEPLER::EV)]);
 
     double e = E.norm();
 
     double n = SQR(GM_Earth) / pow(h / sqrt(1 - SQR(e)), 3);  // 2.82
 
-    keplers0[KEPLER::M] += n * dt;
+    keplers0[static_cast<int>(KEPLER::M)] += n * dt;
 
     VectorEci newPos1 = keplers2Inertial(trace, keplers0);
 
@@ -403,7 +408,7 @@ VectorEci propagateEllipse(
 
     double dtVel = 1e-4;
 
-    keplers0[KEPLER::M] += n * dtVel;
+    keplers0[static_cast<int>(KEPLER::M)] += n * dtVel;
 
     VectorEci velEci;
     if (1)

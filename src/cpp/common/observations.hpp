@@ -233,6 +233,8 @@ struct GObs : Observation, GObsMeta, SatPos
     virtual ~GObs() = default;
 };
 
+void obsVariance(GObs& obs);
+
 struct PObs : Observation
 {
     SatSys   Sat        = {};  ///> Satellite ID (system, prn)

@@ -59,7 +59,7 @@ Vector3d calculateAcceleration(
 
     acc += -area / mass * S0 / CLIGHT * costheta *
            ((alpha + delta) * direction +
-            (M_PI / 6 * s + 2.0 / 3.0 * (1 - s) * (delta + kappa * alpha)) * eN +
+            (PI / 6 * s + 2.0 / 3.0 * (1 - s) * (delta + kappa * alpha)) * eN +
             (4.0 / 3.0 * s + 2.0 * (1 - s)) * rho * costheta * eN);
 
     return acc;

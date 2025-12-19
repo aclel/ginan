@@ -2,16 +2,14 @@
 
 #include "common/fileLog.hpp"
 #include <boost/algorithm/string.hpp>
+#include <boost/json.hpp>
 #include <boost/log/sinks/sync_frontend.hpp>
 #include <boost/log/trivial.hpp>
-#include <bsoncxx/builder/basic/document.hpp>
-#include <bsoncxx/json.hpp>
 #include <chrono>
 #include <ctime>
 
 namespace sinks = boost::log::sinks;
 
-using bsoncxx::builder::basic::kvp;
 using LogSink = sinks::synchronous_sink<FileLog>;
 
 string FileLog::path_log;
@@ -59,14 +57,14 @@ void FileLog::consume(
 
     GTime time = timeGet();
 
-    bsoncxx::builder::basic::document doc = {};
-    doc.append(kvp("label", "message"));
-    doc.append(kvp("Time", time.to_string()));
-    doc.append(kvp("level", logLevel));
-    doc.append(kvp("str", mess));
+    boost::json::object doc = {};
+    doc["label"]            = "message";
+    doc["Time"]             = time.to_string();
+    doc["level"]            = logLevel;
+    doc["str"]              = mess;
 
     if (json)
-        logStream << bsoncxx::to_json(doc) << "\n";
+        logStream << boost::json::serialize(doc) << "\n";
     else
         logStream << logLevel << ": " << mess << "\n";
 }

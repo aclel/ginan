@@ -83,8 +83,8 @@ void updateRinexObsHeader(RinexOutput& rinexOutput, std::fstream& rinexStream, G
         for (auto& [obsCode, obsDesc] : obsCodeDesc)
         {
             obsCodeCnt++;
-            auto obsDescStr = obsDesc._to_string();
-            auto obsCodeStr = obsCode._to_string();
+            auto obsDescStr = enum_to_string(obsDesc);
+            auto obsCodeStr = enum_to_string(obsCode);
             char obsStr[4];
             obsStr[0] = obsDescStr[0];
             obsStr[1] = obsCodeStr[1];
@@ -120,7 +120,7 @@ void updateRinexObsHeader(RinexOutput& rinexOutput, std::fstream& rinexStream, G
         }
     }
 
-    while (numSysLines < 2 * E_Sys::_size())
+    while (numSysLines < 2 * enum_count<E_Sys>())
     {
         // add some lines to be filled in later to allow for the maximum number expected
         tracepdeex(0, rinexStream, "%-60.60s%-20s\n", "", "COMMENT");
@@ -344,7 +344,7 @@ void writeRinexObsBody(
 
         for (auto& [obsCode, obsDesc] : obsCodeDesc)
         {
-            if (obsCode == +E_ObsCode::NONE)
+            if (obsCode == E_ObsCode::NONE)
                 continue;
 
             bool foundObsPair = false;
@@ -444,7 +444,7 @@ bool updateRinexObsOutput(
         for (auto& [ftype, sigsList] : obs.sigsLists)
             for (auto& sig : sigsList)
             {
-                if (sig.code == +E_ObsCode::NONE)
+                if (sig.code == E_ObsCode::NONE)
                     continue;
 
                 pair<E_ObsCode, E_ObsDesc> codePair;

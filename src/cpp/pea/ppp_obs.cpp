@@ -248,7 +248,7 @@ inline static void pppRecClocks(COMMON_PPP_ARGS)
             continue;
         }
 
-        if (found == +E_Source::REMOTE && init.use_remote_sigma)
+        if (found == E_Source::REMOTE && init.use_remote_sigma)
         {
             init.P = dtRecVar;
         }
@@ -312,7 +312,7 @@ inline static void pppSatClocks(COMMON_PPP_ARGS)
             continue;
         }
 
-        if (found == +E_Source::REMOTE && init.use_remote_sigma)
+        if (found == E_Source::REMOTE && init.use_remote_sigma)
         {
             init.P = satClkVar;
         }
@@ -369,7 +369,7 @@ inline static void pppRecAntDelta(COMMON_PPP_ARGS)
 
     for (int i = 0; i < 3; i++)
     {
-        int enumNum = KF::ANT_DELTA;
+        int enumNum = static_cast<int>(KF::ANT_DELTA);
 
         InitialState init = initialStateFromConfig(recOpts.ant_delta, i);
 
@@ -411,9 +411,9 @@ inline static void pppRecPCO(COMMON_PPP_ARGS)
     E_FType recAtxFt = ft;
     if (acsConfig.common_rec_pco)
     {
-        if (Sat.sys == +E_Sys::GLO)
+        if (Sat.sys == E_Sys::GLO)
             recAtxFt = G1;
-        else if (Sat.sys == +E_Sys::BDS)
+        else if (Sat.sys == E_Sys::BDS)
             recAtxFt = B1;
         else
             recAtxFt = F1;
@@ -440,7 +440,7 @@ inline static void pppRecPCO(COMMON_PPP_ARGS)
 
     for (int i = 0; i < 3; i++)
     {
-        int enumNum = KF::REC_PCO_X + i;
+        int enumNum = static_cast<int>(KF::REC_PCO_X) + i;
 
         InitialState init = initialStateFromConfig(recOpts.pco, i);
 
@@ -458,7 +458,7 @@ inline static void pppRecPCO(COMMON_PPP_ARGS)
         variance = -1;
 
         KFKey kfKey;
-        kfKey.type = KF::_from_integral(enumNum);
+        kfKey.type = int_to_enum<KF>(enumNum);
         kfKey.str  = rec.id;
         kfKey.num  = recAtxFt;
 
@@ -497,9 +497,9 @@ inline static void pppSatPCO(COMMON_PPP_ARGS)
 
     if (acsConfig.common_sat_pco)
     {
-        if (Sat.sys == +E_Sys::GLO)
+        if (Sat.sys == E_Sys::GLO)
             satAtxFt = G1;
-        else if (Sat.sys == +E_Sys::BDS)
+        else if (Sat.sys == E_Sys::BDS)
             satAtxFt = B1;
         else
             satAtxFt = F1;
@@ -514,7 +514,7 @@ inline static void pppSatPCO(COMMON_PPP_ARGS)
 
     for (int i = 0; i < 3; i++)
     {
-        int enumNum = KF::SAT_PCO_X + i;
+        int enumNum = static_cast<int>(KF::SAT_PCO_X) + i;
 
         InitialState init = initialStateFromConfig(satOpts.pco, i);
 
@@ -532,7 +532,7 @@ inline static void pppSatPCO(COMMON_PPP_ARGS)
         variance = -1;
 
         KFKey kfKey;
-        kfKey.type = KF::_from_integral(enumNum);
+        kfKey.type = int_to_enum<KF>(enumNum);
         kfKey.Sat  = obs.Sat;
         kfKey.num  = satAtxFt;
 
@@ -573,9 +573,9 @@ inline static void pppRecPCV(COMMON_PPP_ARGS)
 
     if (acsConfig.common_rec_pco)
     {
-        if (Sat.sys == +E_Sys::GLO)
+        if (Sat.sys == E_Sys::GLO)
             recAtxFt = G1;
-        else if (Sat.sys == +E_Sys::BDS)
+        else if (Sat.sys == E_Sys::BDS)
             recAtxFt = B1;
         else
             recAtxFt = F1;
@@ -643,9 +643,9 @@ inline static void pppSatPCV(COMMON_PPP_ARGS)
 
     if (acsConfig.common_sat_pco)
     {
-        if (Sat.sys == +E_Sys::GLO)
+        if (Sat.sys == E_Sys::GLO)
             satAtxFt = G1;
-        else if (Sat.sys == +E_Sys::BDS)
+        else if (Sat.sys == E_Sys::BDS)
             satAtxFt = B1;
         else
             satAtxFt = F1;
@@ -763,7 +763,7 @@ inline static void pppIonStec(COMMON_PPP_ARGS)
 
     if (init.estimate)
     {
-        if (found == +E_Source::REMOTE && init.use_remote_sigma)
+        if (found == E_Source::REMOTE && init.use_remote_sigma)
         {
             init.P = varIono;
         }
@@ -907,7 +907,7 @@ inline static void pppIonStec3(COMMON_PPP_ARGS)
         factor = -1 / 3.0;
 
     E_IonoMapFn mapFn;
-    if (acsConfig.pppOpts.ionoOpts.corr_mode == +E_IonoMode::BROADCAST)
+    if (acsConfig.pppOpts.ionoOpts.corr_mode == E_IonoMode::BROADCAST)
         mapFn = E_IonoMapFn::KLOBUCHAR;
     else
         mapFn = recOpts.mapping_function;
@@ -1050,7 +1050,8 @@ inline static void pppIonModel(COMMON_PPP_ARGS)
             kfKey.rec_ptr = &rec;
             kfKey.num     = i;
 
-            bool pass = kfState.getKFValue(kfKey, init.x);
+            E_Source passSrc = kfState.getKFValue(kfKey, init.x);
+            bool     pass    = passSrc != E_Source::NONE;
 
             double value = init.x;
 
@@ -1114,8 +1115,9 @@ inline static void pppTropMap(COMMON_PPP_ARGS)
             kfKey.type = KF::TROP_MODEL;
             kfKey.num  = i;
 
-            double value = 0;
-            bool   pass  = kfState.getKFValue(kfKey, value);
+            double   value   = 0;
+            E_Source passSrc = kfState.getKFValue(kfKey, value);
+            bool     pass    = passSrc != E_Source::NONE;
 
             modelTroposphere_m += geoMap * dTropDx.wetMap * value;
 
@@ -1206,7 +1208,7 @@ inline static void pppTrop(COMMON_PPP_ARGS)
             continue;
         }
 
-        if (found == +E_Source::REMOTE && init.use_remote_sigma)
+        if (found == E_Source::REMOTE && init.use_remote_sigma)
         {
             init.P = filterVar;
         }
@@ -1241,7 +1243,7 @@ inline static void pppTrop(COMMON_PPP_ARGS)
             continue;
         }
 
-        if (gradsFound == +E_Source::REMOTE && init.use_remote_sigma)
+        if (gradsFound == E_Source::REMOTE && init.use_remote_sigma)
         {
             init.P = gradVars[i];
         }
@@ -1301,7 +1303,7 @@ inline static void pppIntegerAmbiguity(COMMON_PPP_ARGS)
     kfKey.type    = KF::AMBIGUITY;
     kfKey.str     = rec.id;
     kfKey.Sat     = obs.Sat;
-    kfKey.num     = sig.code;
+    kfKey.num     = static_cast<int>(sig.code);
     kfKey.rec_ptr = &rec;
     kfKey.comment = sigName;
 
@@ -1316,7 +1318,7 @@ inline static void pppIntegerAmbiguity(COMMON_PPP_ARGS)
 
     if (init.estimate)
     {
-        if (found == +E_Source::REMOTE && init.use_remote_sigma)
+        if (found == E_Source::REMOTE && init.use_remote_sigma)
         {
             init.P = varAmb;
         }
@@ -1354,7 +1356,7 @@ inline static void pppRecPhasBias(COMMON_PPP_ARGS)
     kfKey.type    = KF::PHASE_BIAS;
     kfKey.str     = rec.id;
     kfKey.Sat     = sysSat;
-    kfKey.num     = sig.code;
+    kfKey.num     = static_cast<int>(sig.code);
     kfKey.rec_ptr = &rec;
     kfKey.comment = sigName;
 
@@ -1364,7 +1366,7 @@ inline static void pppRecPhasBias(COMMON_PPP_ARGS)
 
     if (init.estimate)
     {
-        if (found == +E_Source::REMOTE && init.use_remote_sigma)
+        if (found == E_Source::REMOTE && init.use_remote_sigma)
         {
             init.P = recPhasBiasVar;
         }
@@ -1385,7 +1387,7 @@ inline static void pppRecPhasBias(COMMON_PPP_ARGS)
     else if (biasFound == false)
     {
         BOOST_LOG_TRIVIAL(warning)
-            << "Receiver phase bias not found for " << rec.id << " : " << sig.code._to_string()
+            << "Receiver phase bias not found for " << rec.id << " : " << enum_to_string(sig.code)
             << ". Using undefined_sigma: " << recOpts.phaseBiasModel.undefined_sigma;
     }
 
@@ -1407,7 +1409,7 @@ inline static void pppSatPhasBias(COMMON_PPP_ARGS)
     KFKey kfKey;
     kfKey.type    = KF::PHASE_BIAS;
     kfKey.Sat     = Sat;
-    kfKey.num     = sig.code;
+    kfKey.num     = static_cast<int>(sig.code);
     kfKey.comment = sigName;
 
     E_Source found = kfState.getKFValue(kfKey, satPhasBias, &satPhasBiasVar);
@@ -1416,7 +1418,7 @@ inline static void pppSatPhasBias(COMMON_PPP_ARGS)
 
     if (init.estimate)
     {
-        if (found == +E_Source::REMOTE && init.use_remote_sigma)
+        if (found == E_Source::REMOTE && init.use_remote_sigma)
         {
             init.P = satPhasBiasVar;
         }
@@ -1437,7 +1439,8 @@ inline static void pppSatPhasBias(COMMON_PPP_ARGS)
     else if (biasFound == false)
     {
         BOOST_LOG_TRIVIAL(warning)
-            << "Satellite phase bias not found for " << Sat.id() << " : " << sig.code._to_string()
+            << "Satellite phase bias not found for " << Sat.id() << " : "
+            << enum_to_string(sig.code)
             << ". Using undefined_sigma: " << satOpts.phaseBiasModel.undefined_sigma;
     }
 
@@ -1460,11 +1463,11 @@ inline static void pppRecCodeBias(COMMON_PPP_ARGS)
     kfKey.type    = KF::CODE_BIAS;
     kfKey.str     = rec.id;
     kfKey.Sat     = sysSat;
-    kfKey.num     = sig.code;
+    kfKey.num     = static_cast<int>(sig.code);
     kfKey.rec_ptr = &rec;
     kfKey.comment = sigName;
 
-    if (sysSat.sys == +E_Sys::GLO)
+    if (sysSat.sys == E_Sys::GLO)
     {
         // Glonass has different frequencies per (pair of) sattelite(s), use separate bias for each
         // (ignore pair because geph may not be available)
@@ -1473,11 +1476,11 @@ inline static void pppRecCodeBias(COMMON_PPP_ARGS)
 
     E_Source found = kfState.getKFValue(kfKey, recCodeBias, &recCodeBiasVar);
 
-    InitialState init = initialStateFromConfig(recOpts.code_bias, sig.code);
+    InitialState init = initialStateFromConfig(recOpts.code_bias, static_cast<int>(sig.code));
 
     if (init.estimate)
     {
-        if (found == +E_Source::REMOTE && init.use_remote_sigma)
+        if (found == E_Source::REMOTE && init.use_remote_sigma)
         {
             init.P = recCodeBiasVar;
         }
@@ -1496,14 +1499,14 @@ inline static void pppRecCodeBias(COMMON_PPP_ARGS)
 
         if (Sat.sys == recOpts.receiver_reference_system)
         {
-            auto& recSysOpts = acsConfig.getRecOpts(rec.id, {sysSat.sys._to_string()});
+            auto& recSysOpts = acsConfig.getRecOpts(rec.id, {sysSat.sysName()});
 
             auto thisIt =
                 std::find(recSysOpts.clock_codes.begin(), recSysOpts.clock_codes.end(), sig.code);
             auto autoIt = std::find(
                 recSysOpts.clock_codes.begin(),
                 recSysOpts.clock_codes.end(),
-                +E_ObsCode::AUTO
+                E_ObsCode::AUTO
             );
             auto freqIt = std::find_if(
                 recSysOpts.clock_codes.begin(),
@@ -1543,7 +1546,7 @@ inline static void pppRecCodeBias(COMMON_PPP_ARGS)
     else if (biasFound == false)
     {
         BOOST_LOG_TRIVIAL(warning)
-            << "Receiver code bias not found for " << rec.id << " : " << sig.code._to_string()
+            << "Receiver code bias not found for " << rec.id << " : " << enum_to_string(sig.code)
             << ". Using undefined_sigma: " << recOpts.codeBiasModel.undefined_sigma;
     }
 
@@ -1565,7 +1568,7 @@ inline static void pppSatCodeBias(COMMON_PPP_ARGS)
     KFKey kfKey;
     kfKey.type    = KF::CODE_BIAS;
     kfKey.Sat     = Sat;
-    kfKey.num     = sig.code;
+    kfKey.num     = static_cast<int>(sig.code);
     kfKey.comment = sigName;
 
     E_Source found = kfState.getKFValue(kfKey, satCodeBias, &satCodeBiasVar);
@@ -1574,7 +1577,7 @@ inline static void pppSatCodeBias(COMMON_PPP_ARGS)
 
     if (init.estimate)
     {
-        if (found == +E_Source::REMOTE && init.use_remote_sigma)
+        if (found == E_Source::REMOTE && init.use_remote_sigma)
         {
             init.P = satCodeBiasVar;
         }
@@ -1595,7 +1598,7 @@ inline static void pppSatCodeBias(COMMON_PPP_ARGS)
         auto autoIt = std::find(
             satSysOpts.clock_codes.begin(),
             satSysOpts.clock_codes.end(),
-            +E_ObsCode::AUTO
+            E_ObsCode::AUTO
         );
         auto freqIt = std::find_if(
             satSysOpts.clock_codes.begin(),
@@ -1634,7 +1637,7 @@ inline static void pppSatCodeBias(COMMON_PPP_ARGS)
     else if (biasFound == false)
     {
         BOOST_LOG_TRIVIAL(warning)
-            << "Satellite code bias not found for " << Sat.id() << " : " << sig.code._to_string()
+            << "Satellite code bias not found for " << Sat.id() << " : " << enum_to_string(sig.code)
             << ". Using undefined_sigma: " << satOpts.codeBiasModel.undefined_sigma;
     }
 
@@ -1755,7 +1758,7 @@ void receiverUducGnss(
             for (auto& sig : sigList)
                 for (auto measType : {PHAS, CODE})
                 {
-                    string sigName = sig.code._to_string();
+                    string sigName = enum_to_string(sig.code);
 
                     AutoSender autoSenderTemplate(jsonTrace, tsync);
 
@@ -1773,7 +1776,7 @@ void receiverUducGnss(
                         sizeof(measDescription),
                         "%s %s %s",
                         obs.Sat.id().c_str(),
-                        sig.code._to_string(),
+                        enum_to_string(sig.code).c_str(),
                         (measType == PHAS) ? "L" : "P"
                     );
 
@@ -1906,8 +1909,7 @@ void receiverUducGnss(
                     }
 
                     auto& satOpts = acsConfig.getSatOpts(obs.Sat, {sigName});
-                    auto& recOpts =
-                        acsConfig.getRecOpts(rec.id, {obs.Sat.sys._to_string(), sigName});
+                    auto& recOpts = acsConfig.getRecOpts(rec.id, {obs.Sat.sysName(), sigName});
 
                     checkModels(recOpts, satOpts);
 
@@ -1942,7 +1944,7 @@ void receiverUducGnss(
                             (measType == CODE) ? "CODE" : "PHASE",
                             obs.Sat.id().c_str(),
                             rec.id.c_str(),
-                            sig.code._to_string()
+                            enum_to_string(sig.code)
                         );
                         continue;
                     }
@@ -1969,23 +1971,23 @@ void receiverUducGnss(
                             "\n PPP Phase count: %s %s %s %d",
                             rec.id.c_str(),
                             obs.Sat.id().c_str(),
-                            sig.code._to_string(),
+                            enum_to_string(sig.code),
                             sigStat.phaseRejectCount
                         );
                     }
 
                     measEntry.obsKey.Sat = obs.Sat;
                     measEntry.obsKey.str = rec.id;
-                    measEntry.obsKey.num = sig.code;
+                    measEntry.obsKey.num = static_cast<int>(sig.code);
                     if (measType == CODE)
                     {
                         measEntry.obsKey.type    = KF::CODE_MEAS;
-                        measEntry.obsKey.comment = "P-" + (string)sig.code._to_string();
+                        measEntry.obsKey.comment = "P-" + std::string(enum_to_string(sig.code));
                     }
                     else if (measType == PHAS)
                     {
                         measEntry.obsKey.type    = KF::PHAS_MEAS;
-                        measEntry.obsKey.comment = "L-" + (string)sig.code._to_string();
+                        measEntry.obsKey.comment = "L-" + std::string(enum_to_string(sig.code));
                     }
 
                     // Start with the observed measurement and its noise
@@ -1994,7 +1996,7 @@ void receiverUducGnss(
                         obsKey.str  = rec.id;
                         obsKey.Sat  = obs.Sat;
                         obsKey.type = measEntry.obsKey.type;
-                        obsKey.num  = sig.code;
+                        obsKey.num  = static_cast<int>(sig.code);
 
                         double var = 0;
                         if (measType == CODE)
@@ -2063,7 +2065,7 @@ void receiverUducGnss(
                             continue;
                         }
 
-                        if (found == +E_Source::REMOTE && posInit.use_remote_sigma)
+                        if (found == E_Source::REMOTE && posInit.use_remote_sigma)
                         {
                             posInit.P = recPosVars[i];
                         }
@@ -2112,7 +2114,7 @@ void receiverUducGnss(
                         E_Source found =
                             kfState.getKFValue(recOrbitPosKey, rRecInertial[i], &recOrbitVars[i]);
 
-                        if (found)
+                        if (found != E_Source::NONE)
                         {
                             orbitalReceiver = true;
                         }
@@ -2125,7 +2127,7 @@ void receiverUducGnss(
                         if (posInit.x == 0)
                             posInit.x = rRecInertial[i];
 
-                        if (found == +E_Source::REMOTE && posInit.use_remote_sigma)
+                        if (found == E_Source::REMOTE && posInit.use_remote_sigma)
                         {
                             posInit.P = recOrbitVars[i];
                         }
@@ -2216,7 +2218,7 @@ void receiverUducGnss(
                         if (velInit.x == 0)
                             velInit.x = obs.vSatEci0[i];
 
-                        if (found == +E_Source::REMOTE && posInit.use_remote_sigma)
+                        if (found == E_Source::REMOTE && posInit.use_remote_sigma)
                         {
                             posInit.P = satOrbitVars[i];
                         }
@@ -2444,7 +2446,7 @@ void receiverUducGnss(
                             trace,
                             "\nMeasurement for %s %s\n",
                             ((string)measEntry.obsKey).c_str(),
-                            sig.code._to_string()
+                            enum_to_string(sig.code)
                         );
                     }
 

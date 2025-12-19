@@ -116,7 +116,7 @@ bool readOrbexFileDesc(
                 }
 
                 // currently only GPST and UTC are supported
-                if (tsys != +E_TimeSys::GPST && tsys != +E_TimeSys::UTC)
+                if (tsys != E_TimeSys::GPST && tsys != E_TimeSys::UTC)
                 {
                     BOOST_LOG_TRIVIAL(error) << "Unsupported time system: " << timeSysStr;
                     return false;
@@ -128,14 +128,14 @@ bool readOrbexFileDesc(
 
                 try
                 {
-                    frame = E_ObxFrame::_from_string(frameTypeStr.c_str());
+                    frame = string_to_enum<E_ObxFrame>(frameTypeStr.c_str());
                 }
                 catch (...)
                 {
                     BOOST_LOG_TRIVIAL(debug) << "Unknown Orbex frame type: " << frameTypeStr;
                 }
 
-                if (frame != +E_ObxFrame::ECEF && frame != +E_ObxFrame::ECI)
+                if (frame != E_ObxFrame::ECEF && frame != E_ObxFrame::ECI)
                 {
                     BOOST_LOG_TRIVIAL(error) << "Unsupported Orbex frame type: " << frameTypeStr;
                     return false;

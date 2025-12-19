@@ -1,13 +1,21 @@
 #pragma once
-#ifndef BETTER_ENUMS_DEFAULT_CONSTRUCTOR
-#define BETTER_ENUMS_DEFAULT_CONSTRUCTOR(Enum) \
-   public:                                     \
-    Enum() = default;
-#endif
-#define BETTER_ENUMS_MACRO_FILE "enum_macros.h"  // BETTER_ENUM Extended
 
 #include <cstdint>
-#include "3rdparty/enum.h"  //BETTER_ENUM
+
+// Reduce magic_enum memory usage during compilation
+#define MAGIC_ENUM_RANGE_MIN 0
+#define MAGIC_ENUM_RANGE_MAX 128
+
+// Forward declarations for magic_enum customization
+enum class E_ObsCode : int;
+enum class E_Period : int;
+enum class RtcmMessageType : std::uint16_t;
+enum class IgsSSRSubtype : std::uint16_t;
+
+#include "3rdparty/magic_enum.hpp"
+
+#include "common/enumHelpers.hpp"
+
 typedef enum
 {
     NONE,
@@ -43,15 +51,44 @@ typedef enum
     SVH_UNHEALTHY = -1  // implicitly used in rtcm
 } E_Svh;
 
-BETTER_ENUM(E_Solution, short int, NONE, SINGLE, SINGLE_X, PPP)
+/**
+ * Warning: do not change the order, used by RAIM
+ * The larger is the number better the solution is.
+ * FAILED -> SINGLE_X -> SINGLE (-> PPP)
+ */
+enum class E_Solution : short int
+{
+    NONE,
+    FAILED,
+    SINGLE_X,
+    SINGLE,
+    PPP
+};
 
-BETTER_ENUM(E_Radio, short int, TRANSMITTER, RECEIVER)
+enum class E_Radio : short int
+{
+    TRANSMITTER,
+    RECEIVER
+};
 
-BETTER_ENUM(E_Sys, short int, NONE, GPS, GAL, GLO, QZS, SBS, BDS, LEO, SUPPORTED, IRN, IMS, COMB)
+enum class E_Sys : short int
+{
+    NONE,
+    GPS,
+    GAL,
+    GLO,
+    QZS,
+    SBS,
+    BDS,
+    LEO,
+    SUPPORTED,
+    IRN,
+    IMS,
+    COMB
+};
 
-BETTER_ENUM(
-    E_Block,
-    short int,
+enum class E_Block : short int
+{
     UNKNOWN,
     GPS_I,
     GPS_II,
@@ -92,17 +129,37 @@ BETTER_ENUM(
     IRS_2G,
     SBS,
     LEO
-)
+};
 
-BETTER_ENUM(E_OffsetType, short int, UNSPECIFIED, APC, COM)
+enum class E_OffsetType : short int
+{
+    UNSPECIFIED,
+    APC,
+    COM
+};
 
-BETTER_ENUM(E_TrigType, short int, NONE, COS, SIN)
+enum class E_TrigType : short int
+{
+    NONE,
+    COS,
+    SIN
+};
 
-BETTER_ENUM(E_EmpAxis, short int, NONE, D, Y, B, R, T, N, P, Q)
+enum class E_EmpAxis : short int
+{
+    NONE,
+    D,
+    Y,
+    B,
+    R,
+    T,
+    N,
+    P,
+    Q
+};
 
-BETTER_ENUM(
-    KF,
-    short int,
+enum class KF : short int
+{
     NONE,
     ONE,
     ALL,
@@ -251,11 +308,10 @@ BETTER_ENUM(
     END_INERTIAL_STATES,
 
     RANGE
-)
+};
 
-BETTER_ENUM(
-    E_StateComponent,
-    short int,
+enum class E_StateComponent : short int
+{
     NONE,
 
     X,
@@ -277,31 +333,81 @@ BETTER_ENUM(
     QX,
     QY,
     QZ
-)
+};
 
-BETTER_ENUM(KEPLER, short int, LX, LY, LZ, EU, EV, M)
+enum class KEPLER : short int
+{
+    LX,
+    LY,
+    LZ,
+    EU,
+    EV,
+    M
+};
 
-BETTER_ENUM(E_PolyType, short int, CONSTANT, LAT, LON, LAT_LON, LAT_SQRD, LON_SQRD)
+enum class E_PolyType : short int
+{
+    CONSTANT,
+    LAT,
+    LON,
+    LAT_LON,
+    LAT_SQRD,
+    LON_SQRD
+};
 
-BETTER_ENUM(E_BasisType, short int, POLYNOMIAL, GRIDPOINT)
+enum class E_BasisType : short int
+{
+    POLYNOMIAL,
+    GRIDPOINT
+};
 
-BETTER_ENUM(E_Relativity, short int, OFF, ON)
+enum class E_Relativity : short int
+{
+    OFF,
+    ON
+};
 
-BETTER_ENUM(E_FilterStage, int, LSQ, PREFIT, POSTFIT)
+enum class E_FilterStage : int
+{
+    LSQ,
+    PREFIT,
+    POSTFIT
+};
 
-BETTER_ENUM(E_ChiSqMode, int, INNOVATION, MEASUREMENT, STATE)
+enum class E_ChiSqMode : int
+{
+    INNOVATION,
+    MEASUREMENT,
+    STATE
+};
 
-BETTER_ENUM(E_TropModel, int, STANDARD, SBAS, VMF3, GPT2, CSSR)
+enum class E_TropModel : int
+{
+    STANDARD,
+    SBAS,
+    VMF3,
+    GPT2,
+    CSSR
+};
 
-BETTER_ENUM(E_NoiseModel, int, UNIFORM, ELEVATION_DEPENDENT)
+enum class E_NoiseModel : int
+{
+    UNIFORM,
+    ELEVATION_DEPENDENT
+};
 
-BETTER_ENUM(E_LogLevel, int, DEBUG, WARN, ERROR)
+enum class E_IonoModel : int
+{
+    NONE,
+    MEAS_OUT,
+    BSPLINE,
+    SPHERICAL_CAPS,
+    SPHERICAL_HARMONICS,
+    LOCAL
+};
 
-BETTER_ENUM(E_IonoModel, int, NONE, MEAS_OUT, BSPLINE, SPHERICAL_CAPS, SPHERICAL_HARMONICS, LOCAL)
-
-BETTER_ENUM(
-    E_IonoMode,
-    int,
+enum class E_IonoMode : int
+{
     OFF,                     ///< ionosphere option: correction off
     BROADCAST,               ///< ionosphere option: broadcast model
     SBAS,                    ///< ionosphere option: SBAS model
@@ -311,81 +417,98 @@ BETTER_ENUM(
     QZS,                     ///< ionosphere option: QZSS broadcast model
     LEX,                     ///< ionosphere option: QZSS LEX ionospehre
     STEC                     ///< ionosphere option: SLANT TEC model
-)
+};
 
-BETTER_ENUM(
-    E_IonoMapFn,
-    int,
+enum class E_IonoMapFn : int
+{
     SLM,       ///< single layer model mapping function
+
     MSLM,      ///< modified single layer model mapping function
     MLM,       ///< multiple layer model mapping function
     KLOBUCHAR  ///< Klobuchar mapping function
-)
+};
 
-BETTER_ENUM(
-    E_IonoFrame,
-    int,
+enum class E_IonoFrame : int
+{
     EARTH_FIXED,  ///< Earth-fixed reference frame
     SUN_FIXED     ///< Sun-fixed reference frame
-)
+};
 
-BETTER_ENUM(
-    E_Period,
-    int,
+enum class E_Period : int
+{
     SECOND = 1,
-    MINUTE = 60,
-    HOUR   = 60 * 60,
-    DAY    = 60 * 60 * 24,
-    WEEK   = 60 * 60 * 24 * 7,
-    YEAR   = 60 * 60 * 24 * 365,
+    MINUTE,
+    HOUR,
+    DAY,
+    // WEEK,
+    // YEAR,
 
-    SECONDS      = SECOND,
-    MINUTES      = MINUTE,
-    HOURS        = HOUR,
-    DAYS         = DAY,
-    WEEKS        = WEEK,
-    YEARS        = YEAR,
-    SEC          = SECOND,
-    MIN          = MINUTE,
-    HR           = HOUR,
-    DY           = DAY,
-    WK           = WEEK,
-    YR           = YEAR,
-    SECS         = SECOND,
-    MINS         = MINUTE,
-    HRS          = HOUR,
-    DYS          = DAY,
-    WKS          = WEEK,
-    YRS          = YEAR,
-    SQRT_SEC     = SECOND,
-    SQRT_MIN     = MINUTE,
-    SQRT_HR      = HOUR,
-    SQRT_DY      = DAY,
-    SQRT_WK      = WEEK,
-    SQRT_YR      = YEAR,
-    SQRT_SECS    = SECOND,
-    SQRT_MINS    = MINUTE,
-    SQRT_HRS     = HOUR,
-    SQRT_DYS     = DAY,
-    SQRT_WKS     = WEEK,
-    SQRT_YRS     = YEAR,
-    SQRT_SECOND  = SECOND,
-    SQRT_MINUTE  = MINUTE,
-    SQRT_HOUR    = HOUR,
-    SQRT_DAY     = DAY,
-    SQRT_WEEK    = WEEK,
-    SQRT_YEAR    = YEAR,
+    SECONDS = SECOND,
+    MINUTES = MINUTE,
+    HOURS   = HOUR,
+    DAYS    = DAY,
+    // WEEKS        = WEEK,
+    // YEARS        = YEAR,
+    SEC = SECOND,
+    MIN = MINUTE,
+    HR  = HOUR,
+    DY  = DAY,
+    // WK           = WEEK,
+    // YR           = YEAR,
+    SECS = SECOND,
+    MINS = MINUTE,
+    HRS  = HOUR,
+    DYS  = DAY,
+    // WKS          = WEEK,
+    // YRS          = YEAR,
+    SQRT_SEC = SECOND,
+    SQRT_MIN = MINUTE,
+    SQRT_HR  = HOUR,
+    SQRT_DY  = DAY,
+    // SQRT_WK      = WEEK,
+    // SQRT_YR      = YEAR,
+    SQRT_SECS = SECOND,
+    SQRT_MINS = MINUTE,
+    SQRT_HRS  = HOUR,
+    SQRT_DYS  = DAY,
+    // SQRT_WKS     = WEEK,
+    // SQRT_YRS     = YEAR,
+    SQRT_SECOND = SECOND,
+    SQRT_MINUTE = MINUTE,
+    SQRT_HOUR   = HOUR,
+    SQRT_DAY    = DAY,
+    // SQRT_WEEK    = WEEK,
+    // SQRT_YEAR    = YEAR,
     SQRT_SECONDS = SECOND,
     SQRT_MINUTES = MINUTE,
     SQRT_HOURS   = HOUR,
     SQRT_DAYS    = DAY,
-    SQRT_WEEKS   = WEEK,
-    SQRT_YEARS   = YEAR
-)
+    // SQRT_WEEKS   = WEEK,
+    // SQRT_YEARS   = YEAR
+};
 
-BETTER_ENUM(
-    E_TimeSys,
-    int,
+// Conversion function from E_Period enum to seconds
+inline constexpr int periodToSeconds(E_Period period)
+{
+    switch (period)
+    {
+        case E_Period::SECOND:
+            return 1;
+        case E_Period::MINUTE:
+            return 60;
+        case E_Period::HOUR:
+            return 3600;
+        case E_Period::DAY:
+            return 86400;
+        // case E_Period::WEEK:    return 604800;
+        // case E_Period::YEAR:    return 31536000;
+        default:
+            return 1;
+    }
+}
+
+enum class E_TimeSys : int
+{
     NONE,      ///< NONE for unknown
     GPST,      ///< GPS Time
     GLONASST,  ///< GLONASS Time
@@ -396,17 +519,32 @@ BETTER_ENUM(
     UTC,       ///< Universal Coordinated Time
     UT1,       ///< Universal Time corrected for polar motion
     TT         ///< Terrestrial Time
-)
+};
 
-BETTER_ENUM(E_PosFrame, int, NONE, XYZ, NED, RTN)
+enum class E_PosFrame : int
+{
+    NONE,
+    XYZ,
+    NED,
+    RTN
+};
 
-BETTER_ENUM(E_ObxFrame, short int, OTHER, ECEF, ECI, BCRS)
+enum class E_ObxFrame : short int
+{
+    OTHER,
+    ECEF,
+    ECI,
+    BCRS
+};
 
-BETTER_ENUM(E_FilterMode, int, LSQ, KALMAN)
+enum class E_FilterMode : int
+{
+    LSQ,
+    KALMAN
+};
 
-BETTER_ENUM(
-    E_Inverter,
-    int,
+enum class E_Inverter : int
+{
     NONE,
     INV,
     LLT,
@@ -417,23 +555,29 @@ BETTER_ENUM(
     FULLPIVLU,
     FIRST_UNSUPPORTED = FULLPIVLU,
     FULLPIVHQR
-)
+};
 
-BETTER_ENUM(E_MongoType, int, NONE, STATES, STATES_AVAILABLE, RESIDUALS, TRACE, LIST)
+enum class E_MongoType : int
+{
+    NONE,
+    STATES,
+    STATES_AVAILABLE,
+    RESIDUALS,
+    TRACE,
+    LIST
+};
 
-BETTER_ENUM(
-    E_ObsDesc,
-    int,
+enum class E_ObsDesc : int
+{
     C,  // Code / Pseudorange
     L,  // Phase
     D,  // Doppler
     S,  // Raw signal strength (carrier to noise ratio)
     X   // Receiver channel numbers
-)
+};
 
-BETTER_ENUM(
-    E_ObsCode,
-    int,
+enum class E_ObsCode : int
+{
     NONE = 0,   ///< none or unknown
     L1C  = 1,   ///< L1C/A,G1C/A,E1C		(GPS,GLO,GAL,QZS,SBS)
     L1P  = 2,   ///< L1P,G1P    			(GPS,GLO)
@@ -505,12 +649,11 @@ BETTER_ENUM(
     L7Z  = 69,  ///< L7 Data+Pilot       	(BDS)
     L8D  = 70,  ///< L8 Data       			(BDS)
     L8P  = 71,  ///< L8 Pilot       		(BDS)
-    AUTO = 9001
-)
+    AUTO = 99
+};
 
-BETTER_ENUM(
-    E_ObsCode2,
-    int,
+enum class E_ObsCode2 : int
+{
     NONE,
     P1,
     P2,
@@ -531,11 +674,10 @@ BETTER_ENUM(
     L7,
     L8,
     LA
-)
+};
 
-BETTER_ENUM(
-    E_ARmode,
-    short int,
+enum class E_ARmode : short int
+{
     OFF,
     ROUND,
     ITER_RND,
@@ -544,21 +686,19 @@ BETTER_ENUM(
     LAMBDA_ALT,
     LAMBDA_AL2,
     LAMBDA_BIE
-)
+};
 
-BETTER_ENUM(
-    E_NavRecType,
-    short int,
+enum class E_NavRecType : short int
+{
     NONE,  ///< NONE for unknown */
     EPH,   ///< Ephemerides data including orbit, clock, biases, accuracy and status parameters */
     STO,   ///< System Time and UTC proxy offset parameters */
     EOP,   ///< Earth Orientation Parameters */
     ION    ///< Global/Regional ionospheric model parameters */
-)
+};
 
-BETTER_ENUM(
-    E_NavMsgType,
-    short int,
+enum class E_NavMsgType : short int
+{
     NONE,  ///< NONE for unknown
     LNAV,  ///< GPS/QZSS/NavIC Legacy Navigation Messages
     FDMA,  ///< GLONASS Legacy FDMA Navigation Message
@@ -575,14 +715,19 @@ BETTER_ENUM(
     CNV3,  ///< BeiDou-3 CNAV-3 Navigation Message
     CNVX   ///< GPS/QZSS CNAV or CNAV-2 Navigation Message  BeiDou-3 CNAV-1, CNAV-2 or CNAV-3
            ///< Navigation
-)
+};
 ///< Message
 
-BETTER_ENUM(E_SatType, short int, NONE, GEO, IGSO, MEO)
+enum class E_SatType : short int
+{
+    NONE,
+    GEO,
+    IGSO,
+    MEO
+};
 
-BETTER_ENUM(
-    E_StoCode,
-    short int,
+enum class E_StoCode : short int
+{
     NONE,
     GPUT,
     GLUT,
@@ -614,11 +759,10 @@ BETTER_ENUM(
     SBBD,
     SBQZ,
     SBIR
-)
+};
 
-BETTER_ENUM(
-    E_UtcId,
-    short int,
+enum class E_UtcId : short int
+{
     NONE,
     UTC_USNO,
     UTC_SU,
@@ -629,112 +773,447 @@ BETTER_ENUM(
     UTCIRN,
     UTC_OP,
     UTC_NIST
-)
+};
 
-BETTER_ENUM(E_SbasId, short int, NONE, WAAS, EGNOS, MSAS, GAGAN, SDCM, BDSBAS, KASS, A_SBAS, SPAN)
+enum class E_SbasId : short int
+{
+    NONE,
+    WAAS,
+    EGNOS,
+    MSAS,
+    GAGAN,
+    SDCM,
+    BDSBAS,
+    KASS,
+    A_SBAS,
+    SPAN
+};
 
-BETTER_ENUM(
-    RtcmMessageType,
-    uint16_t,
+enum class RtcmMessageType : uint16_t
+{
     NONE = 0,
 
-    GPS_EPHEMERIS = 1019,
+    GPS_EPHEMERIS = 1,
+    GLO_EPHEMERIS,
+    BDS_EPHEMERIS,
+    QZS_EPHEMERIS,
+    GAL_FNAV_EPHEMERIS,
+    GAL_INAV_EPHEMERIS,
 
-    GLO_EPHEMERIS = 1020,
+    GPS_SSR_ORB_CORR,
+    GPS_SSR_CLK_CORR,
+    GPS_SSR_CODE_BIAS,
+    GPS_SSR_COMB_CORR,
+    GPS_SSR_URA,
+    GPS_SSR_HR_CLK_CORR,
+    GPS_SSR_PHASE_BIAS,
 
-    // GPS_NETWORK_RTK_RESIDUAL = 1030,
-    // RECEIVER_AND_ANTENNA_DESC = 1033,
+    GLO_SSR_ORB_CORR,
+    GLO_SSR_CLK_CORR,
+    GLO_SSR_CODE_BIAS,
+    GLO_SSR_COMB_CORR,
+    GLO_SSR_URA,
+    GLO_SSR_HR_CLK_CORR,
+    GLO_SSR_PHASE_BIAS,
 
-    BDS_EPHEMERIS = 1042,
+    MSM4_GPS,
+    MSM5_GPS,
+    MSM6_GPS,
+    MSM7_GPS,
 
-    QZS_EPHEMERIS = 1044,
+    MSM4_GLONASS,
+    MSM5_GLONASS,
+    MSM6_GLONASS,
+    MSM7_GLONASS,
 
-    GAL_FNAV_EPHEMERIS = 1045,
-    GAL_INAV_EPHEMERIS = 1046,
+    MSM4_GALILEO,
+    MSM5_GALILEO,
+    MSM6_GALILEO,
+    MSM7_GALILEO,
 
-    GPS_SSR_ORB_CORR    = 1057,
-    GPS_SSR_CLK_CORR    = 1058,
-    GPS_SSR_CODE_BIAS   = 1059,
-    GPS_SSR_COMB_CORR   = 1060,
-    GPS_SSR_URA         = 1061,
-    GPS_SSR_HR_CLK_CORR = 1062,
-    GPS_SSR_PHASE_BIAS  = 1265,
+    MSM4_QZSS,
+    MSM5_QZSS,
+    MSM6_QZSS,
+    MSM7_QZSS,
 
-    GLO_SSR_ORB_CORR    = 1063,
-    GLO_SSR_CLK_CORR    = 1064,
-    GLO_SSR_CODE_BIAS   = 1065,
-    GLO_SSR_COMB_CORR   = 1066,
-    GLO_SSR_URA         = 1067,
-    GLO_SSR_HR_CLK_CORR = 1068,
-    GLO_SSR_PHASE_BIAS  = 1266,
+    MSM4_BEIDOU,
+    MSM5_BEIDOU,
+    MSM6_BEIDOU,
+    MSM7_BEIDOU,
 
-    MSM4_GPS = 1074,
-    MSM5_GPS = 1075,
-    MSM6_GPS = 1076,
-    MSM7_GPS = 1077,
+    GAL_SSR_ORB_CORR,
+    GAL_SSR_CLK_CORR,
+    GAL_SSR_CODE_BIAS,
+    GAL_SSR_COMB_CORR,
+    GAL_SSR_URA,
+    GAL_SSR_HR_CLK_CORR,
+    GAL_SSR_PHASE_BIAS,
 
-    MSM4_GLONASS = 1084,
-    MSM5_GLONASS = 1085,
-    MSM6_GLONASS = 1086,
-    MSM7_GLONASS = 1087,
+    QZS_SSR_ORB_CORR,
+    QZS_SSR_CLK_CORR,
+    QZS_SSR_CODE_BIAS,
+    QZS_SSR_COMB_CORR,
+    QZS_SSR_URA,
+    QZS_SSR_HR_CLK_CORR,
+    QZS_SSR_PHASE_BIAS,
 
-    MSM4_GALILEO = 1094,
-    MSM5_GALILEO = 1095,
-    MSM6_GALILEO = 1096,
-    MSM7_GALILEO = 1097,
+    SBS_SSR_ORB_CORR,
+    SBS_SSR_CLK_CORR,
+    SBS_SSR_CODE_BIAS,
+    SBS_SSR_COMB_CORR,
+    SBS_SSR_URA,
+    SBS_SSR_HR_CLK_CORR,
+    SBS_SSR_PHASE_BIAS,
 
-    MSM4_QZSS = 1114,
-    MSM5_QZSS = 1115,
-    MSM6_QZSS = 1116,
-    MSM7_QZSS = 1117,
+    BDS_SSR_ORB_CORR,
+    BDS_SSR_CLK_CORR,
+    BDS_SSR_CODE_BIAS,
+    BDS_SSR_COMB_CORR,
+    BDS_SSR_URA,
+    BDS_SSR_HR_CLK_CORR,
+    BDS_SSR_PHASE_BIAS,
 
-    MSM4_BEIDOU = 1124,
-    MSM5_BEIDOU = 1125,
-    MSM6_BEIDOU = 1126,
-    MSM7_BEIDOU = 1127,
+    COMPACT_SSR,
+    IGS_SSR,
+    CUSTOM
+};
 
-    // GLONASS_AUX_OPERATION_INFO = 1230
+// Conversion from RtcmMessageType enum to actual RTCM message number
+inline constexpr uint16_t rtcmTypeToMessageNumber(RtcmMessageType type)
+{
+    switch (type)
+    {
+        case RtcmMessageType::NONE:
+            return 0;
+        case RtcmMessageType::GPS_EPHEMERIS:
+            return 1019;
+        case RtcmMessageType::GLO_EPHEMERIS:
+            return 1020;
+        case RtcmMessageType::BDS_EPHEMERIS:
+            return 1042;
+        case RtcmMessageType::QZS_EPHEMERIS:
+            return 1044;
+        case RtcmMessageType::GAL_FNAV_EPHEMERIS:
+            return 1045;
+        case RtcmMessageType::GAL_INAV_EPHEMERIS:
+            return 1046;
 
-    GAL_SSR_ORB_CORR    = 1240,
-    GAL_SSR_CLK_CORR    = 1241,
-    GAL_SSR_CODE_BIAS   = 1242,
-    GAL_SSR_COMB_CORR   = 1243,
-    GAL_SSR_URA         = 1244,
-    GAL_SSR_HR_CLK_CORR = 1245,
-    GAL_SSR_PHASE_BIAS  = 1267,
+        case RtcmMessageType::GPS_SSR_ORB_CORR:
+            return 1057;
+        case RtcmMessageType::GPS_SSR_CLK_CORR:
+            return 1058;
+        case RtcmMessageType::GPS_SSR_CODE_BIAS:
+            return 1059;
+        case RtcmMessageType::GPS_SSR_COMB_CORR:
+            return 1060;
+        case RtcmMessageType::GPS_SSR_URA:
+            return 1061;
+        case RtcmMessageType::GPS_SSR_HR_CLK_CORR:
+            return 1062;
+        case RtcmMessageType::GPS_SSR_PHASE_BIAS:
+            return 1265;
 
-    QZS_SSR_ORB_CORR    = 1246,
-    QZS_SSR_CLK_CORR    = 1247,
-    QZS_SSR_CODE_BIAS   = 1248,
-    QZS_SSR_COMB_CORR   = 1249,
-    QZS_SSR_URA         = 1250,
-    QZS_SSR_HR_CLK_CORR = 1251,
-    QZS_SSR_PHASE_BIAS  = 1268,
+        case RtcmMessageType::GLO_SSR_ORB_CORR:
+            return 1063;
+        case RtcmMessageType::GLO_SSR_CLK_CORR:
+            return 1064;
+        case RtcmMessageType::GLO_SSR_CODE_BIAS:
+            return 1065;
+        case RtcmMessageType::GLO_SSR_COMB_CORR:
+            return 1066;
+        case RtcmMessageType::GLO_SSR_URA:
+            return 1067;
+        case RtcmMessageType::GLO_SSR_HR_CLK_CORR:
+            return 1068;
+        case RtcmMessageType::GLO_SSR_PHASE_BIAS:
+            return 1266;
 
-    SBS_SSR_ORB_CORR    = 1252,
-    SBS_SSR_CLK_CORR    = 1253,
-    SBS_SSR_CODE_BIAS   = 1254,
-    SBS_SSR_COMB_CORR   = 1255,
-    SBS_SSR_URA         = 1256,
-    SBS_SSR_HR_CLK_CORR = 1257,
-    SBS_SSR_PHASE_BIAS  = 1269,
+        case RtcmMessageType::MSM4_GPS:
+            return 1074;
+        case RtcmMessageType::MSM5_GPS:
+            return 1075;
+        case RtcmMessageType::MSM6_GPS:
+            return 1076;
+        case RtcmMessageType::MSM7_GPS:
+            return 1077;
 
-    BDS_SSR_ORB_CORR    = 1258,
-    BDS_SSR_CLK_CORR    = 1259,
-    BDS_SSR_CODE_BIAS   = 1260,
-    BDS_SSR_COMB_CORR   = 1261,
-    BDS_SSR_URA         = 1262,
-    BDS_SSR_HR_CLK_CORR = 1263,
-    BDS_SSR_PHASE_BIAS  = 1270,
+        case RtcmMessageType::MSM4_GLONASS:
+            return 1084;
+        case RtcmMessageType::MSM5_GLONASS:
+            return 1085;
+        case RtcmMessageType::MSM6_GLONASS:
+            return 1086;
+        case RtcmMessageType::MSM7_GLONASS:
+            return 1087;
 
-    COMPACT_SSR = 4073,
-    IGS_SSR     = 4076,
-    CUSTOM      = 4082
-)
+        case RtcmMessageType::MSM4_GALILEO:
+            return 1094;
+        case RtcmMessageType::MSM5_GALILEO:
+            return 1095;
+        case RtcmMessageType::MSM6_GALILEO:
+            return 1096;
+        case RtcmMessageType::MSM7_GALILEO:
+            return 1097;
 
-BETTER_ENUM(
-    CompactSSRSubtype,
-    unsigned short,
+        case RtcmMessageType::MSM4_QZSS:
+            return 1114;
+        case RtcmMessageType::MSM5_QZSS:
+            return 1115;
+        case RtcmMessageType::MSM6_QZSS:
+            return 1116;
+        case RtcmMessageType::MSM7_QZSS:
+            return 1117;
+
+        case RtcmMessageType::MSM4_BEIDOU:
+            return 1124;
+        case RtcmMessageType::MSM5_BEIDOU:
+            return 1125;
+        case RtcmMessageType::MSM6_BEIDOU:
+            return 1126;
+        case RtcmMessageType::MSM7_BEIDOU:
+            return 1127;
+
+        case RtcmMessageType::GAL_SSR_ORB_CORR:
+            return 1240;
+        case RtcmMessageType::GAL_SSR_CLK_CORR:
+            return 1241;
+        case RtcmMessageType::GAL_SSR_CODE_BIAS:
+            return 1242;
+        case RtcmMessageType::GAL_SSR_COMB_CORR:
+            return 1243;
+        case RtcmMessageType::GAL_SSR_URA:
+            return 1244;
+        case RtcmMessageType::GAL_SSR_HR_CLK_CORR:
+            return 1245;
+        case RtcmMessageType::GAL_SSR_PHASE_BIAS:
+            return 1267;
+
+        case RtcmMessageType::QZS_SSR_ORB_CORR:
+            return 1246;
+        case RtcmMessageType::QZS_SSR_CLK_CORR:
+            return 1247;
+        case RtcmMessageType::QZS_SSR_CODE_BIAS:
+            return 1248;
+        case RtcmMessageType::QZS_SSR_COMB_CORR:
+            return 1249;
+        case RtcmMessageType::QZS_SSR_URA:
+            return 1250;
+        case RtcmMessageType::QZS_SSR_HR_CLK_CORR:
+            return 1251;
+        case RtcmMessageType::QZS_SSR_PHASE_BIAS:
+            return 1268;
+
+        case RtcmMessageType::SBS_SSR_ORB_CORR:
+            return 1252;
+        case RtcmMessageType::SBS_SSR_CLK_CORR:
+            return 1253;
+        case RtcmMessageType::SBS_SSR_CODE_BIAS:
+            return 1254;
+        case RtcmMessageType::SBS_SSR_COMB_CORR:
+            return 1255;
+        case RtcmMessageType::SBS_SSR_URA:
+            return 1256;
+        case RtcmMessageType::SBS_SSR_HR_CLK_CORR:
+            return 1257;
+        case RtcmMessageType::SBS_SSR_PHASE_BIAS:
+            return 1269;
+
+        case RtcmMessageType::BDS_SSR_ORB_CORR:
+            return 1258;
+        case RtcmMessageType::BDS_SSR_CLK_CORR:
+            return 1259;
+        case RtcmMessageType::BDS_SSR_CODE_BIAS:
+            return 1260;
+        case RtcmMessageType::BDS_SSR_COMB_CORR:
+            return 1261;
+        case RtcmMessageType::BDS_SSR_URA:
+            return 1262;
+        case RtcmMessageType::BDS_SSR_HR_CLK_CORR:
+            return 1263;
+        case RtcmMessageType::BDS_SSR_PHASE_BIAS:
+            return 1270;
+
+        case RtcmMessageType::COMPACT_SSR:
+            return 4073;
+        case RtcmMessageType::IGS_SSR:
+            return 4076;
+        case RtcmMessageType::CUSTOM:
+            return 4082;
+
+        default:
+            return 0;
+    }
+}
+
+// Conversion from RTCM message number to RtcmMessageType enum
+inline constexpr RtcmMessageType messageNumberToRtcmType(uint16_t msgNum)
+{
+    switch (msgNum)
+    {
+        case 0:
+            return RtcmMessageType::NONE;
+        case 1019:
+            return RtcmMessageType::GPS_EPHEMERIS;
+        case 1020:
+            return RtcmMessageType::GLO_EPHEMERIS;
+        case 1042:
+            return RtcmMessageType::BDS_EPHEMERIS;
+        case 1044:
+            return RtcmMessageType::QZS_EPHEMERIS;
+        case 1045:
+            return RtcmMessageType::GAL_FNAV_EPHEMERIS;
+        case 1046:
+            return RtcmMessageType::GAL_INAV_EPHEMERIS;
+
+        case 1057:
+            return RtcmMessageType::GPS_SSR_ORB_CORR;
+        case 1058:
+            return RtcmMessageType::GPS_SSR_CLK_CORR;
+        case 1059:
+            return RtcmMessageType::GPS_SSR_CODE_BIAS;
+        case 1060:
+            return RtcmMessageType::GPS_SSR_COMB_CORR;
+        case 1061:
+            return RtcmMessageType::GPS_SSR_URA;
+        case 1062:
+            return RtcmMessageType::GPS_SSR_HR_CLK_CORR;
+        case 1265:
+            return RtcmMessageType::GPS_SSR_PHASE_BIAS;
+
+        case 1063:
+            return RtcmMessageType::GLO_SSR_ORB_CORR;
+        case 1064:
+            return RtcmMessageType::GLO_SSR_CLK_CORR;
+        case 1065:
+            return RtcmMessageType::GLO_SSR_CODE_BIAS;
+        case 1066:
+            return RtcmMessageType::GLO_SSR_COMB_CORR;
+        case 1067:
+            return RtcmMessageType::GLO_SSR_URA;
+        case 1068:
+            return RtcmMessageType::GLO_SSR_HR_CLK_CORR;
+        case 1266:
+            return RtcmMessageType::GLO_SSR_PHASE_BIAS;
+
+        case 1074:
+            return RtcmMessageType::MSM4_GPS;
+        case 1075:
+            return RtcmMessageType::MSM5_GPS;
+        case 1076:
+            return RtcmMessageType::MSM6_GPS;
+        case 1077:
+            return RtcmMessageType::MSM7_GPS;
+
+        case 1084:
+            return RtcmMessageType::MSM4_GLONASS;
+        case 1085:
+            return RtcmMessageType::MSM5_GLONASS;
+        case 1086:
+            return RtcmMessageType::MSM6_GLONASS;
+        case 1087:
+            return RtcmMessageType::MSM7_GLONASS;
+
+        case 1094:
+            return RtcmMessageType::MSM4_GALILEO;
+        case 1095:
+            return RtcmMessageType::MSM5_GALILEO;
+        case 1096:
+            return RtcmMessageType::MSM6_GALILEO;
+        case 1097:
+            return RtcmMessageType::MSM7_GALILEO;
+
+        case 1114:
+            return RtcmMessageType::MSM4_QZSS;
+        case 1115:
+            return RtcmMessageType::MSM5_QZSS;
+        case 1116:
+            return RtcmMessageType::MSM6_QZSS;
+        case 1117:
+            return RtcmMessageType::MSM7_QZSS;
+
+        case 1124:
+            return RtcmMessageType::MSM4_BEIDOU;
+        case 1125:
+            return RtcmMessageType::MSM5_BEIDOU;
+        case 1126:
+            return RtcmMessageType::MSM6_BEIDOU;
+        case 1127:
+            return RtcmMessageType::MSM7_BEIDOU;
+
+        case 1240:
+            return RtcmMessageType::GAL_SSR_ORB_CORR;
+        case 1241:
+            return RtcmMessageType::GAL_SSR_CLK_CORR;
+        case 1242:
+            return RtcmMessageType::GAL_SSR_CODE_BIAS;
+        case 1243:
+            return RtcmMessageType::GAL_SSR_COMB_CORR;
+        case 1244:
+            return RtcmMessageType::GAL_SSR_URA;
+        case 1245:
+            return RtcmMessageType::GAL_SSR_HR_CLK_CORR;
+        case 1267:
+            return RtcmMessageType::GAL_SSR_PHASE_BIAS;
+
+        case 1246:
+            return RtcmMessageType::QZS_SSR_ORB_CORR;
+        case 1247:
+            return RtcmMessageType::QZS_SSR_CLK_CORR;
+        case 1248:
+            return RtcmMessageType::QZS_SSR_CODE_BIAS;
+        case 1249:
+            return RtcmMessageType::QZS_SSR_COMB_CORR;
+        case 1250:
+            return RtcmMessageType::QZS_SSR_URA;
+        case 1251:
+            return RtcmMessageType::QZS_SSR_HR_CLK_CORR;
+        case 1268:
+            return RtcmMessageType::QZS_SSR_PHASE_BIAS;
+
+        case 1252:
+            return RtcmMessageType::SBS_SSR_ORB_CORR;
+        case 1253:
+            return RtcmMessageType::SBS_SSR_CLK_CORR;
+        case 1254:
+            return RtcmMessageType::SBS_SSR_CODE_BIAS;
+        case 1255:
+            return RtcmMessageType::SBS_SSR_COMB_CORR;
+        case 1256:
+            return RtcmMessageType::SBS_SSR_URA;
+        case 1257:
+            return RtcmMessageType::SBS_SSR_HR_CLK_CORR;
+        case 1269:
+            return RtcmMessageType::SBS_SSR_PHASE_BIAS;
+
+        case 1258:
+            return RtcmMessageType::BDS_SSR_ORB_CORR;
+        case 1259:
+            return RtcmMessageType::BDS_SSR_CLK_CORR;
+        case 1260:
+            return RtcmMessageType::BDS_SSR_CODE_BIAS;
+        case 1261:
+            return RtcmMessageType::BDS_SSR_COMB_CORR;
+        case 1262:
+            return RtcmMessageType::BDS_SSR_URA;
+        case 1263:
+            return RtcmMessageType::BDS_SSR_HR_CLK_CORR;
+        case 1270:
+            return RtcmMessageType::BDS_SSR_PHASE_BIAS;
+
+        case 4073:
+            return RtcmMessageType::COMPACT_SSR;
+        case 4076:
+            return RtcmMessageType::IGS_SSR;
+        case 4082:
+            return RtcmMessageType::CUSTOM;
+
+        default:
+            return RtcmMessageType::NONE;
+    }
+}
+
+enum class CompactSSRSubtype : unsigned short
+{
     NONE = 0,
     MSK  = 1,
     ORB  = 2,
@@ -748,12 +1227,11 @@ BETTER_ENUM(
     SRV  = 10,
     CMB  = 11,
     ATM  = 12
-)
+};
 
 // the order and spacing of these is magic, dont modify
-BETTER_ENUM(
-    IgsSSRSubtype,
-    unsigned short,
+enum class IgsSSRSubtype : unsigned short
+{
     NONE = 0,
 
     GROUP_ORB = 1,
@@ -820,31 +1298,44 @@ BETTER_ENUM(
     SBS_URA    = 127,
 
     IONVTEC = 201
-)
+};
 
-BETTER_ENUM(
-    E_Source,
-    short int,
+enum class E_Source : short int
+{
     NONE,
     SPP,
     CONFIG,
     PRECISE,
     SSR,
+    SBAS,
     KALMAN,
     BROADCAST,
     NOMINAL,
     MODEL,
     PSEUDO,
     REMOTE
-)
+};
 
-BETTER_ENUM(E_OrbexRecord, short int, PCS, VCS, CPC, CVC, POS, VEL, CLK, CRT, ATT)
+enum class E_OrbexRecord : short int
+{
+    PCS,
+    VCS,
+    CPC,
+    CVC,
+    POS,
+    VEL,
+    CLK,
+    CRT,
+    ATT
+};
 
-BETTER_ENUM(E_RTCMSubmessage, short int, TIMESTAMP = 1)
+enum class E_RTCMSubmessage : short int
+{
+    TIMESTAMP = 1
+};
 
-BETTER_ENUM(
-    E_CrdEpochEvent,
-    int,
+enum class E_CrdEpochEvent : int
+{
     REC_RX        = 0,  // ground receive time (at SRP) (two-way)
     SAT_BN        = 1,  // spacecraft bounce time (two-way)
     REC_TX        = 2,  // ground transmit time (at SRP) (two-way)
@@ -853,17 +1344,32 @@ BETTER_ENUM(
     REC_TX_SAT_RX = 5,  // ground transmit time (at SRP) and spacecraft receive time (one-way)
     SAT_TX_REC_RX = 6,  // spacecraft transmit time and ground receive time (at SRP) (one-way)
     NONE          = 7
-)
+};
 
-BETTER_ENUM(E_ObsWaitCode, short int, OK, EARLY_DATA, NO_DATA_WAIT, NO_DATA_EVER)
+enum class E_ObsAgeCode : short int
+{
+    OK,
+    NO_OBS,
+    PAST_OBS,
+    CURRENT_OBS,
+    FUTURE_OBS
+};
 
-BETTER_ENUM(E_SRPModel, int, NONE, CANNONBALL, BOXWING)
+enum class E_SRPModel : int
+{
+    NONE,
+    CANNONBALL,
+    BOXWING
+};
 
-BETTER_ENUM(E_TidesModel, short int, ELASTIC, ANELASTIC)
+enum class E_TidesModel : short int
+{
+    ELASTIC,
+    ANELASTIC
+};
 
-BETTER_ENUM(
-    E_ThirdBody,
-    short int,
+enum class E_ThirdBody : short int
+{
     MERCURY = 1,
     VENUS   = 2,
     EARTH   = 3,
@@ -875,31 +1381,28 @@ BETTER_ENUM(
     PLUTO   = 9,
     MOON    = 10,
     SUN     = 11
-)  // from jpl, do not modify
+};  // from jpl, do not modify
 
-BETTER_ENUM(
-    E_SigWarning,
-    short int,
+enum class E_SigWarning : short int
+{
     SIG_OUTG = 1,  // Minor (one signal) outage
     LOW_ELEV = 2,  // Low elevation
     CYC_SLIP = 3,  // Cycle slip
     MAJ_OUTG = 4,  // Major (whole satellite/receiver) outage
     USR_DISC = 5
-)                  // User defined
+};  // User defined
 
-BETTER_ENUM(
-    E_SlrRangeType,
-    short int,    // from crd_v2.01.pdf p7
-    TX_ONLY = 0,  // no ranges (i.e., transmit time only)
-    ONE_WAY = 1,  // one-way ranging
-    TWO_WAY = 2,  // two-way ranging
-    RX_ONLY = 3,  // receive times only
+enum class E_SlrRangeType : short int  // from crd_v2.01.pdf p7
+{
+    TX_ONLY = 0,                       // no ranges (i.e., transmit time only)
+    ONE_WAY = 1,                       // one-way ranging
+    TWO_WAY = 2,                       // two-way ranging
+    RX_ONLY = 3,                       // receive times only
     MIXED   = 3
-)  // mixed (for real-time data recording, and combination of one- and two-way ranging, e.g., T2L2)
+};  // mixed (for real-time data recording, and combination of one- and two-way ranging, e.g., T2L2)
 
-BETTER_ENUM(
-    E_UBXClass,
-    short int,
+enum class E_UBXClass : short int
+{
     NAV = 0x01,
     RXM = 0x02,
     INF = 0x04,
@@ -909,15 +1412,22 @@ BETTER_ENUM(
     AID = 0x0B,
     TIM = 0x0D,
     ESF = 0x10
-)
+};
 
-BETTER_ENUM(E_RXMId, short int, SFRBX = 0x13, MEASX = 0x14, RAWX = 0x15)
+enum class E_RXMId : short int
+{
+    SFRBX = 0x13,
+    MEASX = 0x14,
+    RAWX  = 0x15
+};
 
-BETTER_ENUM(E_ESFId, short int, MEAS = 0x02)
+enum class E_ESFId : short int
+{
+    MEAS = 0x02
+};
 
-BETTER_ENUM(
-    E_MEASDataType,
-    short int,
+enum class E_MEASDataType : short int
+{
     NONE       = 0,
     GYRO_Z     = 5,
     WHEEL_FL   = 6,
@@ -932,17 +1442,43 @@ BETTER_ENUM(
     ACCL_X     = 16,
     ACCL_Y     = 17,
     ACCL_Z     = 18
-)
+};
 
-BETTER_ENUM(E_Month, short int, NONE, JAN, FEB, MAR, ARP, MAY, JUN, JUL, AUG, SEP, OCT, NOV, DEC)
+enum class E_Month : short int
+{
+    NONE,
+    JAN,
+    FEB,
+    MAR,
+    ARP,
+    MAY,
+    JUN,
+    JUL,
+    AUG,
+    SEP,
+    OCT,
+    NOV,
+    DEC
+};
 
-BETTER_ENUM(E_FilePos, short int, COORD, CURR_TIME, TOTAL_TIME, PCDH, NUM_SAMPLES, FOOTER)
+enum class E_FilePos : short int
+{
+    COORD,
+    CURR_TIME,
+    TOTAL_TIME,
+    PCDH,
+    NUM_SAMPLES,
+    FOOTER
+};
 
-BETTER_ENUM(E_SSROutTiming, short int, GPS_TIME, LATEST_CLOCK_ESTIMATE)
+enum class E_SSROutTiming : short int
+{
+    GPS_TIME,
+    LATEST_CLOCK_ESTIMATE
+};
 
-BETTER_ENUM(
-    E_Component,
-    short int,
+enum class E_Component : short int
+{
     NONE,
     X,
     P,
@@ -997,7 +1533,7 @@ BETTER_ENUM(
     SRP_BOXWING,
     ANTENNA_THRUST,
     PLANETARY_PERTURBATION
-)
+};
 
 enum E_ReturnType
 {
@@ -1008,12 +1544,71 @@ enum E_ReturnType
     BAD_LENGTH
 };
 
-BETTER_ENUM(E_LoadingType, short int, NONE, OCEAN, ATMOSPHERIC)
+enum class E_LoadingType : short int
+{
+    NONE,
+    OCEAN,
+    ATMOSPHERIC
+};
 
-BETTER_ENUM(E_TidalConstituent, short int, M2, S2, N2, K2, S1, K1, O1, P1, Q1, MF, MM, SSA)
+enum class E_TidalConstituent : short int
+{
+    M2,
+    S2,
+    N2,
+    K2,
+    S1,
+    K1,
+    O1,
+    P1,
+    Q1,
+    MF,
+    MM,
+    SSA
+};
 
-BETTER_ENUM(E_TidalComponent, short int, EAST, WEST, NORTH, SOUTH, UP, DOWN)
+enum class E_TidalComponent : short int
+{
+    EAST,
+    WEST,
+    NORTH,
+    SOUTH,
+    UP,
+    DOWN
+};
 
-BETTER_ENUM(E_Mongo, short int, NONE, PRIMARY, SECONDARY, BOTH)
+enum class E_Mongo : short int
+{
+    NONE,
+    PRIMARY,
+    SECONDARY,
+    BOTH
+};
 
-BETTER_ENUM(E_Mincon, short int, PSEUDO_OBS, WEIGHT_MATRIX, VARIANCE_INVERSE, COVARIANCE_INVERSE)
+enum class E_Mincon : short int
+{
+    PSEUDO_OBS,
+    WEIGHT_MATRIX,
+    VARIANCE_INVERSE,
+    COVARIANCE_INVERSE
+};
+
+// Extend magic_enum range for enums with outlier values
+namespace magic_enum
+{
+namespace customize
+{
+template <>
+struct enum_range<E_ObsCode>
+{
+    static constexpr int min = 0;
+    static constexpr int max = 100;  // Must be > AUTO (99)
+};
+template <>
+struct enum_range<IgsSSRSubtype>
+{
+    static constexpr int min = 0;
+    static constexpr int max = 210;  // Must be > IONVTEC (201)
+};
+}  // namespace customize
+}  // namespace magic_enum

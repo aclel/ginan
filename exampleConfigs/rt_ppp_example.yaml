@@ -40,8 +40,8 @@ inputs:
 outputs:
   metadata:
     config_description: rt_ppp_example_<HASH>
-    user: your_NTRIP_username
-    pass: your_NTRIP_password
+    user: your_ntrip_user
+    pass: your_ntrip_pass
 
   outputs_root: ./outputs/<CONFIG>
 
@@ -187,7 +187,17 @@ processing_options:
     # always_reinitialise: false # Reset SPP state to zero to avoid potential for lock-in of bad states
     max_lsq_iterations: 12 # Maximum number of iterations of least squares allowed for convergence
     outlier_screening:
-      raim: true # Enable Receiver Autonomous Integrity Monitoring
+      chi_square:
+        enable: true
+        sigma_threshold: 5
+      least_square:
+        max_iterations: 1
+        sigma_check: false
+        omega_test: true
+        meas_sigma_threshold: 5
+      raim:
+        enable: true
+        max_iterations: 2
       max_gdop: 30 # Maximum dilution of precision before error is flagged
 
   ppp_filter:
@@ -221,7 +231,6 @@ processing_options:
       enable: false
       lag: -1
       # interval: 86400
-      inverter: LDLT # Inverter to be used within the rts processor, which may provide different performance outcomes in terms of processing time and accuracy and stability
       filename: <CONFIG>_<RECEIVER>.rts
 
     # periodic_reset:

@@ -301,7 +301,7 @@ antPco(string id, E_Sys sys, E_FType ft, GTime time, double& var, E_Radio radio,
 
     var = 0;
 
-    if (radio == +E_Radio::TRANSMITTER)
+    if (radio == E_Radio::TRANSMITTER)
         return pco.satPco;
     else
         return pco.recPco;

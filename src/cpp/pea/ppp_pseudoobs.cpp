@@ -144,7 +144,7 @@ void readPseudosFromFile(string& file)
         }
 
         Pseudo pseudo;
-        pseudo.kfKey.type = KF::_from_string_nocase(tokens[2].c_str());
+        pseudo.kfKey.type = string_to_enum_nocase<KF>(tokens[2]);
         pseudo.kfKey.str  = tokens[3];
         pseudo.kfKey.Sat  = SatSys(tokens[4].c_str());
         pseudo.kfKey.num  = std::stoi(tokens[5].c_str());
@@ -190,7 +190,8 @@ void filterPseudoObs(Trace& trace, KFState& kfState, KFMeasEntryList& kfMeasEntr
         {
             double filterVal;
 
-            bool found = kfState.getKFValue(pseudo.kfKey, filterVal);
+            E_Source foundSrc = kfState.getKFValue(pseudo.kfKey, filterVal);
+            bool     found    = foundSrc != E_Source::NONE;
 
             if (found == false)
             {
@@ -450,7 +451,7 @@ void pseudoRecDcb(
         sysKey.num   = 0;
 
         auto& setSat = setSatMap[sysKey];
-        if (setSat.sys && setSat != key.Sat)
+        if (setSat.sys != E_Sys::NONE && setSat != key.Sat)
         {
             // have used a different key before, only use that one again.
             continue;
@@ -459,7 +460,7 @@ void pseudoRecDcb(
         doneRec = key.str;
         doneSys = sysSat;
 
-        auto& recSysOpts = acsConfig.getRecOpts(key.str, {sys._to_string()});
+        auto& recSysOpts = acsConfig.getRecOpts(key.str, {enum_to_string(sys)});
 
         if (recSysOpts.zero_dcb_codes.size() != 2)
         {
@@ -476,7 +477,7 @@ void pseudoRecDcb(
         KFKey testKey;
 
         while (it != kfState.kfIndexMap.end() && (testKey = it->first, true) &&
-               testKey.type == +KF::CODE_BIAS && testKey.str == key.str && testKey.Sat == key.Sat)
+               testKey.type == KF::CODE_BIAS && testKey.str == key.str && testKey.Sat == key.Sat)
         {
             codeBiasKeys.push_back(testKey);
             ++it;
@@ -486,7 +487,7 @@ void pseudoRecDcb(
             }
         }
 
-        if (firstCode == +E_ObsCode::AUTO || secondCode == +E_ObsCode::AUTO)
+        if (firstCode == E_ObsCode::AUTO || secondCode == E_ObsCode::AUTO)
         {
             // get all available codes in priority order to resolve the autos
 
@@ -498,12 +499,12 @@ void pseudoRecDcb(
                     auto iterA = std::find(
                         code_priorities.begin(),
                         code_priorities.end(),
-                        E_ObsCode::_from_integral(a.num)
+                        int_to_enum<E_ObsCode>(a.num)
                     );
                     auto iterB = std::find(
                         code_priorities.begin(),
                         code_priorities.end(),
-                        E_ObsCode::_from_integral(b.num)
+                        int_to_enum<E_ObsCode>(b.num)
                     );
 
                     if (iterA < iterB)
@@ -517,7 +518,7 @@ void pseudoRecDcb(
             {
                 auto& code = *code_ptr;
 
-                if (code != +E_ObsCode::AUTO)
+                if (code != E_ObsCode::AUTO)
                 {
                     continue;
                 }
@@ -528,7 +529,7 @@ void pseudoRecDcb(
                 {
                     for (auto& codeBiasKey : codeBiasKeys)
                     {
-                        E_ObsCode keyCode = E_ObsCode::_from_integral(codeBiasKey.num);
+                        E_ObsCode keyCode = int_to_enum<E_ObsCode>(codeBiasKey.num);
 
                         if (code2Freq[sys][keyCode] == code2Freq[sys][firstCode])
                         {
@@ -539,7 +540,7 @@ void pseudoRecDcb(
                         code = keyCode;
 
                         BOOST_LOG_TRIVIAL(debug) << "Setting zero_dcb_code for " << key.str << " "
-                                                 << sys._to_string() << " to " << code;
+                                                 << enum_to_string(sys) << " to " << code;
 
                         break;
                     }
@@ -552,9 +553,9 @@ void pseudoRecDcb(
         }
 
         KFKey key1 = key;
-        key1.num   = firstCode;
+        key1.num   = static_cast<int>(firstCode);
         KFKey key2 = key;
-        key2.num   = secondCode;
+        key2.num   = static_cast<int>(secondCode);
 
         if (std::find(codeBiasKeys.begin(), codeBiasKeys.end(), key1) == codeBiasKeys.end() ||
             std::find(codeBiasKeys.begin(), codeBiasKeys.end(), key2) == codeBiasKeys.end())
@@ -631,7 +632,10 @@ void receiverPseudoObs(
                 KFKey posKey = key;
                 posKey.num   = i;
 
-                found &= kfState.getKFValue(posKey, apriori(i));
+                {
+                    E_Source src = kfState.getKFValue(posKey, apriori(i));
+                    found &= (src != E_Source::NONE);
+                }
             }
 
             // make sure this receiver is initialised since this might be the first time anyone has

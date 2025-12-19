@@ -313,7 +313,7 @@ vector<uint8_t> encodecompactORB(map<SatSys, SSROut>& orbClkMap, int updateIntIn
     for (auto& [ind, sat] : currentSatMap)
     {
         bitLen += 49;
-        if (sat.sys == +E_Sys::GAL)
+        if (sat.sys == E_Sys::GAL)
             bitLen += 2;
     }
     int byteLen = ceil(bitLen / 8.0);
@@ -360,7 +360,7 @@ vector<uint8_t> encodecompactORB(map<SatSys, SSROut>& orbClkMap, int updateIntIn
         }
 
         int ns = 8;
-        if (sat.sys == +E_Sys::GAL)
+        if (sat.sys == E_Sys::GAL)
             ns = 10;
 
         i = setbituInc(buf, i, ns, iode);
@@ -462,7 +462,7 @@ vector<uint8_t> encodecompactCMB(map<SatSys, SSROut>& orbClkMap, int updateIntIn
     for (auto& [ind, sat] : currentSatMap)
     {
         bitLen += 64;
-        if (sat.sys == +E_Sys::GAL)
+        if (sat.sys == E_Sys::GAL)
             bitLen += 2;
     }
     int byteLen = ceil(bitLen / 8.0);
@@ -515,7 +515,7 @@ vector<uint8_t> encodecompactCMB(map<SatSys, SSROut>& orbClkMap, int updateIntIn
         }
 
         int ns = 8;
-        if (sat.sys == +E_Sys::GAL)
+        if (sat.sys == E_Sys::GAL)
             ns = 10;
 
         i = setbituInc(buf, i, ns, iode);

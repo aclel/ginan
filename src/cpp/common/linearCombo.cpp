@@ -149,7 +149,7 @@ S_LC& getLC(
     lc = getLC(L_A, L_B, P_A, P_B, lamA, lamB, nullptr, nullptr);
 
     // special cases
-    if (fB == F5 && (obs.Sat.sys == +E_Sys::GAL || obs.Sat.sys == +E_Sys::BDS))
+    if (fB == F5 && (obs.Sat.sys == E_Sys::GAL || obs.Sat.sys == E_Sys::BDS))
         lc.MW_c *= -1; /* cycle */
 
     if (fA == F1 && fB == F2)
@@ -192,7 +192,7 @@ void obs2lc(
     lc_t&  lcBase  ///< Linear combination base object to use
 )
 {
-    int sys = obs.Sat.sys;
+    E_Sys sys = obs.Sat.sys;
 
     E_FType frq1;
     E_FType frq2;

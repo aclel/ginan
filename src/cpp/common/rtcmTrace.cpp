@@ -1,12 +1,10 @@
 // #pragma GCC optimize ("O0")
 
 #include "common/rtcmTrace.hpp"
-#include <bsoncxx/json.hpp>
+#include <boost/json.hpp>
 #include "common/common.hpp"
 #include "common/ephemeris.hpp"
 #include "common/ssr.hpp"
-
-using bsoncxx::builder::basic::kvp;
 
 map<RtcmMessageType, E_Sys> rtcmMessageSystemMap = {
     {RtcmMessageType::GPS_EPHEMERIS, E_Sys::GPS},
@@ -97,34 +95,34 @@ void RtcmTrace::traceSsrEph(RtcmMessageType messCode, SatSys Sat, SSREph& ssrEph
 
     GTime nearTime = timeGet();
 
-    bsoncxx::builder::basic::document doc = {};
-    doc.append(kvp("type", "ssrEph"));
-    doc.append(kvp("Mountpoint", rtcmMountpoint));
-    doc.append(kvp("MessageNumber", messCode._to_integral()));
-    doc.append(kvp("MessageType", messCode._to_string()));
-    doc.append(kvp("ReceivedSentTimeGPST", nearTime.to_string()));
-    doc.append(kvp("EpochTimeGPST", ssrEph.ssrMeta.receivedTime.to_string()));
-    doc.append(kvp("ReferenceTimeGPST", ssrEph.t0.to_string()));
-    doc.append(kvp("EpochTime1s", ssrEph.ssrMeta.epochTime1s));
-    doc.append(kvp("SSRUpdateIntervalSec", ssrEph.udi));
-    doc.append(kvp("SSRUpdateIntervalIndex", ssrEph.ssrMeta.updateIntIndex));
-    doc.append(kvp("MultipleMessageIndicator", ssrEph.ssrMeta.multipleMessage));
-    doc.append(kvp("SatReferenceDatum", (int)ssrEph.ssrMeta.referenceDatum)
-    );  // 0 = ITRF, 1 = Regional // bsoncxx doesn't like uints
-    doc.append(kvp("IODSSR", ssrEph.iod));
-    doc.append(kvp("SSRProviderID", (int)ssrEph.ssrMeta.provider));
-    doc.append(kvp("SSRSolutionID", (int)ssrEph.ssrMeta.solution));
-    doc.append(kvp("Sat", Sat.id()));
-    doc.append(kvp("IODE", ssrEph.iode));
-    doc.append(kvp("IODCRC", ssrEph.iodcrc));
-    doc.append(kvp("DeltaRadial", ssrEph.deph[0]));
-    doc.append(kvp("DeltaAlongTrack", ssrEph.deph[1]));
-    doc.append(kvp("DeltaCrossTrack", ssrEph.deph[2]));
-    doc.append(kvp("DotDeltaRadial", ssrEph.ddeph[0]));
-    doc.append(kvp("DotDeltaAlongTrack", ssrEph.ddeph[1]));
-    doc.append(kvp("DotDeltaCrossTrack", ssrEph.ddeph[2]));
+    boost::json::object doc;
+    doc["type"]                     = "ssrEph";
+    doc["Mountpoint"]               = rtcmMountpoint;
+    doc["MessageNumber"]            = static_cast<int>(messCode);
+    doc["MessageType"]              = enum_to_string(messCode);
+    doc["ReceivedSentTimeGPST"]     = nearTime.to_string();
+    doc["EpochTimeGPST"]            = ssrEph.ssrMeta.receivedTime.to_string();
+    doc["ReferenceTimeGPST"]        = ssrEph.t0.to_string();
+    doc["EpochTime1s"]              = ssrEph.ssrMeta.epochTime1s;
+    doc["SSRUpdateIntervalSec"]     = ssrEph.udi;
+    doc["SSRUpdateIntervalIndex"]   = ssrEph.ssrMeta.updateIntIndex;
+    doc["MultipleMessageIndicator"] = ssrEph.ssrMeta.multipleMessage;
+    doc["SatReferenceDatum"] =
+        static_cast<int>(ssrEph.ssrMeta.referenceDatum);  // 0 = ITRF, 1 = Regional
+    doc["IODSSR"]             = ssrEph.iod;
+    doc["SSRProviderID"]      = static_cast<int>(ssrEph.ssrMeta.provider);
+    doc["SSRSolutionID"]      = static_cast<int>(ssrEph.ssrMeta.solution);
+    doc["Sat"]                = Sat.id();
+    doc["IODE"]               = ssrEph.iode;
+    doc["IODCRC"]             = ssrEph.iodcrc;
+    doc["DeltaRadial"]        = ssrEph.deph[0];
+    doc["DeltaAlongTrack"]    = ssrEph.deph[1];
+    doc["DeltaCrossTrack"]    = ssrEph.deph[2];
+    doc["DotDeltaRadial"]     = ssrEph.ddeph[0];
+    doc["DotDeltaAlongTrack"] = ssrEph.ddeph[1];
+    doc["DotDeltaCrossTrack"] = ssrEph.ddeph[2];
 
-    fout << bsoncxx::to_json(doc) << "\n";
+    fout << boost::json::serialize(doc) << "\n";
 }
 
 void RtcmTrace::traceSsrClk(RtcmMessageType messCode, SatSys Sat, SSRClk& ssrClk)
@@ -143,29 +141,29 @@ void RtcmTrace::traceSsrClk(RtcmMessageType messCode, SatSys Sat, SSRClk& ssrClk
 
     GTime nearTime = timeGet();
 
-    bsoncxx::builder::basic::document doc = {};
-    doc.append(kvp("type", "ssrClk"));
-    doc.append(kvp("Mountpoint", rtcmMountpoint));
-    doc.append(kvp("MessageNumber", messCode._to_integral()));
-    doc.append(kvp("MessageType", messCode._to_string()));
-    doc.append(kvp("ReceivedSentTimeGPST", nearTime.to_string()));
-    doc.append(kvp("EpochTimeGPST", ssrClk.ssrMeta.receivedTime.to_string()));
-    doc.append(kvp("ReferenceTimeGPST", ssrClk.t0.to_string()));
-    doc.append(kvp("EpochTime1s", ssrClk.ssrMeta.epochTime1s));
-    doc.append(kvp("SSRUpdateIntervalSec", ssrClk.udi));
-    doc.append(kvp("SSRUpdateIntervalIndex", ssrClk.ssrMeta.updateIntIndex));
-    doc.append(kvp("MultipleMessageIndicator", ssrClk.ssrMeta.multipleMessage));
-    doc.append(kvp("SatReferenceDatum", (int)ssrClk.ssrMeta.referenceDatum)
+    boost::json::object doc;
+    doc["type"]                     = "ssrClk";
+    doc["Mountpoint"]               = rtcmMountpoint;
+    doc["MessageNumber"]            = static_cast<int>(messCode);
+    doc["MessageType"]              = enum_to_string(messCode);
+    doc["ReceivedSentTimeGPST"]     = nearTime.to_string();
+    doc["EpochTimeGPST"]            = ssrClk.ssrMeta.receivedTime.to_string();
+    doc["ReferenceTimeGPST"]        = ssrClk.t0.to_string();
+    doc["EpochTime1s"]              = ssrClk.ssrMeta.epochTime1s;
+    doc["SSRUpdateIntervalSec"]     = ssrClk.udi;
+    doc["SSRUpdateIntervalIndex"]   = ssrClk.ssrMeta.updateIntIndex;
+    doc["MultipleMessageIndicator"] = ssrClk.ssrMeta.multipleMessage;
+    doc["SatReferenceDatum"]        = static_cast<int>(ssrClk.ssrMeta.referenceDatum
     );  // 0 = ITRF, 1 = Regional	// could be combined corrections
-    doc.append(kvp("IODSSR", ssrClk.iod));
-    doc.append(kvp("SSRProviderID", (int)ssrClk.ssrMeta.provider));
-    doc.append(kvp("SSRSolutionID", (int)ssrClk.ssrMeta.solution));
-    doc.append(kvp("Sat", Sat.id()));
-    doc.append(kvp("DeltaClockC0", ssrClk.dclk[0]));
-    doc.append(kvp("DeltaClockC1", ssrClk.dclk[1]));
-    doc.append(kvp("DeltaClockC2", ssrClk.dclk[2]));
+    doc["IODSSR"]                   = ssrClk.iod;
+    doc["SSRProviderID"]            = static_cast<int>(ssrClk.ssrMeta.provider);
+    doc["SSRSolutionID"]            = static_cast<int>(ssrClk.ssrMeta.solution);
+    doc["Sat"]                      = Sat.id();
+    doc["DeltaClockC0"]             = ssrClk.dclk[0];
+    doc["DeltaClockC1"]             = ssrClk.dclk[1];
+    doc["DeltaClockC2"]             = ssrClk.dclk[2];
 
-    fout << bsoncxx::to_json(doc) << "\n";
+    fout << boost::json::serialize(doc) << "\n";
 }
 
 void RtcmTrace::traceSsrUra(RtcmMessageType messCode, SatSys Sat, SSRUra& ssrUra)
@@ -184,25 +182,25 @@ void RtcmTrace::traceSsrUra(RtcmMessageType messCode, SatSys Sat, SSRUra& ssrUra
 
     GTime nearTime = timeGet();
 
-    bsoncxx::builder::basic::document doc = {};
-    doc.append(kvp("type", "ssrURA"));
-    doc.append(kvp("Mountpoint", rtcmMountpoint));
-    doc.append(kvp("MessageNumber", messCode._to_integral()));
-    doc.append(kvp("MessageType", messCode._to_string()));
-    doc.append(kvp("ReceivedSentTimeGPST", nearTime.to_string()));
-    doc.append(kvp("EpochTimeGPST", ssrUra.ssrMeta.receivedTime.to_string()));
-    doc.append(kvp("ReferenceTimeGPST", ssrUra.t0.to_string()));
-    doc.append(kvp("EpochTime1s", ssrUra.ssrMeta.epochTime1s));
-    doc.append(kvp("SSRUpdateIntervalSec", ssrUra.udi));
-    doc.append(kvp("SSRUpdateIntervalIndex", ssrUra.ssrMeta.updateIntIndex));
-    doc.append(kvp("MultipleMessageIndicator", ssrUra.ssrMeta.multipleMessage));
-    doc.append(kvp("IODSSR", ssrUra.iod));
-    doc.append(kvp("SSRProviderID", (int)ssrUra.ssrMeta.provider));
-    doc.append(kvp("SSRSolutionID", (int)ssrUra.ssrMeta.solution));
-    doc.append(kvp("Sat", Sat.id()));
-    doc.append(kvp("SSRURA", ssrUra.ura));
+    boost::json::object doc;
+    doc["type"]                     = "ssrURA";
+    doc["Mountpoint"]               = rtcmMountpoint;
+    doc["MessageNumber"]            = static_cast<int>(messCode);
+    doc["MessageType"]              = enum_to_string(messCode);
+    doc["ReceivedSentTimeGPST"]     = nearTime.to_string();
+    doc["EpochTimeGPST"]            = ssrUra.ssrMeta.receivedTime.to_string();
+    doc["ReferenceTimeGPST"]        = ssrUra.t0.to_string();
+    doc["EpochTime1s"]              = ssrUra.ssrMeta.epochTime1s;
+    doc["SSRUpdateIntervalSec"]     = ssrUra.udi;
+    doc["SSRUpdateIntervalIndex"]   = ssrUra.ssrMeta.updateIntIndex;
+    doc["MultipleMessageIndicator"] = ssrUra.ssrMeta.multipleMessage;
+    doc["IODSSR"]                   = ssrUra.iod;
+    doc["SSRProviderID"]            = (int)ssrUra.ssrMeta.provider;
+    doc["SSRSolutionID"]            = (int)ssrUra.ssrMeta.solution;
+    doc["Sat"]                      = Sat.id();
+    doc["SSRURA"]                   = ssrUra.ura;
 
-    fout << bsoncxx::to_json(doc) << "\n";
+    fout << boost::json::serialize(doc) << "\n";
 }
 
 void RtcmTrace::traceSsrHRClk(RtcmMessageType messCode, SatSys Sat, SSRHRClk& SsrHRClk)
@@ -221,25 +219,25 @@ void RtcmTrace::traceSsrHRClk(RtcmMessageType messCode, SatSys Sat, SSRHRClk& Ss
 
     GTime nearTime = timeGet();
 
-    bsoncxx::builder::basic::document doc = {};
-    doc.append(kvp("type", "ssrHRClk"));
-    doc.append(kvp("Mountpoint", rtcmMountpoint));
-    doc.append(kvp("MessageNumber", messCode._to_integral()));
-    doc.append(kvp("MessageType", messCode._to_string()));
-    doc.append(kvp("ReceivedSentTimeGPST", nearTime.to_string()));
-    doc.append(kvp("EpochTimeGPST", SsrHRClk.ssrMeta.receivedTime.to_string()));
-    doc.append(kvp("ReferenceTimeGPST", SsrHRClk.t0.to_string()));
-    doc.append(kvp("EpochTime1s", SsrHRClk.ssrMeta.epochTime1s));
-    doc.append(kvp("SSRUpdateIntervalSec", SsrHRClk.udi));
-    doc.append(kvp("SSRUpdateIntervalIndex", SsrHRClk.ssrMeta.updateIntIndex));
-    doc.append(kvp("MultipleMessageIndicator", SsrHRClk.ssrMeta.multipleMessage));
-    doc.append(kvp("IODSSR", SsrHRClk.iod));
-    doc.append(kvp("SSRProviderID", (int)SsrHRClk.ssrMeta.provider));
-    doc.append(kvp("SSRSolutionID", (int)SsrHRClk.ssrMeta.solution));
-    doc.append(kvp("Sat", Sat.id()));
-    doc.append(kvp("HighRateClockCorr", SsrHRClk.hrclk));
+    boost::json::object doc;
+    doc["type"]                     = "ssrHRClk";
+    doc["Mountpoint"]               = rtcmMountpoint;
+    doc["MessageNumber"]            = static_cast<int>(messCode);
+    doc["MessageType"]              = enum_to_string(messCode);
+    doc["ReceivedSentTimeGPST"]     = nearTime.to_string();
+    doc["EpochTimeGPST"]            = SsrHRClk.ssrMeta.receivedTime.to_string();
+    doc["ReferenceTimeGPST"]        = SsrHRClk.t0.to_string();
+    doc["EpochTime1s"]              = SsrHRClk.ssrMeta.epochTime1s;
+    doc["SSRUpdateIntervalSec"]     = SsrHRClk.udi;
+    doc["SSRUpdateIntervalIndex"]   = SsrHRClk.ssrMeta.updateIntIndex;
+    doc["MultipleMessageIndicator"] = SsrHRClk.ssrMeta.multipleMessage;
+    doc["IODSSR"]                   = SsrHRClk.iod;
+    doc["SSRProviderID"]            = (int)SsrHRClk.ssrMeta.provider;
+    doc["SSRSolutionID"]            = (int)SsrHRClk.ssrMeta.solution;
+    doc["Sat"]                      = Sat.id();
+    doc["HighRateClockCorr"]        = SsrHRClk.hrclk;
 
-    fout << bsoncxx::to_json(doc) << "\n";
+    fout << boost::json::serialize(doc) << "\n";
 }
 
 void RtcmTrace::traceSsrCodeBias(
@@ -263,26 +261,26 @@ void RtcmTrace::traceSsrCodeBias(
 
     GTime nearTime = timeGet();
 
-    bsoncxx::builder::basic::document doc = {};
-    doc.append(kvp("type", "ssrCodeBias"));
-    doc.append(kvp("Mountpoint", rtcmMountpoint));
-    doc.append(kvp("MessageNumber", messCode._to_integral()));
-    doc.append(kvp("MessageType", messCode._to_string()));
-    doc.append(kvp("ReceivedSentTimeGPST", nearTime.to_string()));
-    doc.append(kvp("EpochTimeGPST", ssrBias.ssrMeta.receivedTime.to_string()));
-    doc.append(kvp("ReferenceTimeGPST", ssrBias.t0.to_string()));
-    doc.append(kvp("EpochTime1s", ssrBias.ssrMeta.epochTime1s));
-    doc.append(kvp("SSRUpdateIntervalSec", ssrBias.udi));
-    doc.append(kvp("SSRUpdateIntervalIndex", ssrBias.ssrMeta.updateIntIndex));
-    doc.append(kvp("MultipleMessageIndicator", ssrBias.ssrMeta.multipleMessage));
-    doc.append(kvp("IODSSR", ssrBias.iod));
-    doc.append(kvp("SSRProviderID", (int)ssrBias.ssrMeta.provider));
-    doc.append(kvp("SSRSolutionID", (int)ssrBias.ssrMeta.solution));
-    doc.append(kvp("Sat", Sat.id()));
-    doc.append(kvp("Code", code._to_string()));
-    doc.append(kvp("Bias", ssrBias.obsCodeBiasMap[code].bias));
+    boost::json::object doc;
+    doc["type"]                     = "ssrCodeBias";
+    doc["Mountpoint"]               = rtcmMountpoint;
+    doc["MessageNumber"]            = static_cast<int>(messCode);
+    doc["MessageType"]              = enum_to_string(messCode);
+    doc["ReceivedSentTimeGPST"]     = nearTime.to_string();
+    doc["EpochTimeGPST"]            = ssrBias.ssrMeta.receivedTime.to_string();
+    doc["ReferenceTimeGPST"]        = ssrBias.t0.to_string();
+    doc["EpochTime1s"]              = ssrBias.ssrMeta.epochTime1s;
+    doc["SSRUpdateIntervalSec"]     = ssrBias.udi;
+    doc["SSRUpdateIntervalIndex"]   = ssrBias.ssrMeta.updateIntIndex;
+    doc["MultipleMessageIndicator"] = ssrBias.ssrMeta.multipleMessage;
+    doc["IODSSR"]                   = ssrBias.iod;
+    doc["SSRProviderID"]            = (int)ssrBias.ssrMeta.provider;
+    doc["SSRSolutionID"]            = (int)ssrBias.ssrMeta.solution;
+    doc["Sat"]                      = Sat.id();
+    doc["Code"]                     = enum_to_string(code);
+    doc["Bias"]                     = ssrBias.obsCodeBiasMap[code].bias;
 
-    fout << bsoncxx::to_json(doc) << "\n";
+    fout << boost::json::serialize(doc) << "\n";
 }
 
 void RtcmTrace::traceSsrPhasBias(
@@ -306,33 +304,33 @@ void RtcmTrace::traceSsrPhasBias(
 
     GTime nearTime = timeGet();
 
-    bsoncxx::builder::basic::document doc = {};
-    doc.append(kvp("type", "ssrPhasBias"));
-    doc.append(kvp("Mountpoint", rtcmMountpoint));
-    doc.append(kvp("MessageNumber", messCode._to_integral()));
-    doc.append(kvp("MessageType", messCode._to_string()));
-    doc.append(kvp("ReceivedSentTimeGPST", nearTime.to_string()));
-    doc.append(kvp("EpochTimeGPST", ssrBias.ssrMeta.receivedTime.to_string()));
-    doc.append(kvp("ReferenceTimeGPST", ssrBias.t0.to_string()));
-    doc.append(kvp("EpochTime1s", ssrBias.ssrMeta.epochTime1s));
-    doc.append(kvp("SSRUpdateIntervalSec", ssrBias.udi));
-    doc.append(kvp("SSRUpdateIntervalIndex", ssrBias.ssrMeta.updateIntIndex));
-    doc.append(kvp("MultipleMessageIndicator", ssrBias.ssrMeta.multipleMessage));
-    doc.append(kvp("IODSSR", ssrBias.iod));
-    doc.append(kvp("SSRProviderID", (int)ssrBias.ssrMeta.provider));
-    doc.append(kvp("SSRSolutionID", (int)ssrBias.ssrMeta.solution));
-    doc.append(kvp("DisperBiasConsisIndicator", ssrBias.ssrPhase.dispBiasConistInd));
-    doc.append(kvp("MWConsistencyIndicator", ssrBias.ssrPhase.MWConistInd));
-    doc.append(kvp("Sat", Sat.id()));
-    doc.append(kvp("YawAngle", ssrBias.ssrPhase.yawAngle));
-    doc.append(kvp("YawRate", ssrBias.ssrPhase.yawRate));
-    doc.append(kvp("Code", code._to_string()));
-    doc.append(kvp("SignalIntegerIndicator", (int)ssrBias.ssrPhaseChs[code].signalIntInd));
-    doc.append(kvp("SignalsWLIntegerIndicator", (int)ssrBias.ssrPhaseChs[code].signalWLIntInd));
-    doc.append(kvp("SignalDiscontinuityCount", (int)ssrBias.ssrPhaseChs[code].signalDisconCnt));
-    doc.append(kvp("Bias", ssrBias.obsCodeBiasMap[code].bias));
+    boost::json::object doc;
+    doc["type"]                      = "ssrPhasBias";
+    doc["Mountpoint"]                = rtcmMountpoint;
+    doc["MessageNumber"]             = static_cast<int>(messCode);
+    doc["MessageType"]               = enum_to_string(messCode);
+    doc["ReceivedSentTimeGPST"]      = nearTime.to_string();
+    doc["EpochTimeGPST"]             = ssrBias.ssrMeta.receivedTime.to_string();
+    doc["ReferenceTimeGPST"]         = ssrBias.t0.to_string();
+    doc["EpochTime1s"]               = ssrBias.ssrMeta.epochTime1s;
+    doc["SSRUpdateIntervalSec"]      = ssrBias.udi;
+    doc["SSRUpdateIntervalIndex"]    = ssrBias.ssrMeta.updateIntIndex;
+    doc["MultipleMessageIndicator"]  = ssrBias.ssrMeta.multipleMessage;
+    doc["IODSSR"]                    = ssrBias.iod;
+    doc["SSRProviderID"]             = (int)ssrBias.ssrMeta.provider;
+    doc["SSRSolutionID"]             = (int)ssrBias.ssrMeta.solution;
+    doc["DisperBiasConsisIndicator"] = ssrBias.ssrPhase.dispBiasConistInd;
+    doc["MWConsistencyIndicator"]    = ssrBias.ssrPhase.MWConistInd;
+    doc["Sat"]                       = Sat.id();
+    doc["YawAngle"]                  = ssrBias.ssrPhase.yawAngle;
+    doc["YawRate"]                   = ssrBias.ssrPhase.yawRate;
+    doc["Code"]                      = enum_to_string(code);
+    doc["SignalIntegerIndicator"]    = (int)ssrBias.ssrPhaseChs[code].signalIntInd;
+    doc["SignalsWLIntegerIndicator"] = (int)ssrBias.ssrPhaseChs[code].signalWLIntInd;
+    doc["SignalDiscontinuityCount"]  = (int)ssrBias.ssrPhaseChs[code].signalDisconCnt;
+    doc["Bias"]                      = ssrBias.obsCodeBiasMap[code].bias;
 
-    fout << bsoncxx::to_json(doc) << "\n";
+    fout << boost::json::serialize(doc) << "\n";
 }
 
 void RtcmTrace::traceTimestamp(GTime time)
@@ -349,13 +347,13 @@ void RtcmTrace::traceTimestamp(GTime time)
         return;
     }
 
-    bsoncxx::builder::basic::document doc = {};
-    doc.append(kvp("type", "timestamp"));
-    doc.append(kvp("Mountpoint", rtcmMountpoint));
-    doc.append(kvp("time", (string)time));
-    doc.append(kvp("ticks", (double)time.bigTime));
+    boost::json::object doc;
+    doc["type"]       = "timestamp";
+    doc["Mountpoint"] = rtcmMountpoint;
+    doc["time"]       = (string)time;
+    doc["ticks"]      = (double)time.bigTime;
 
-    fout << bsoncxx::to_json(doc) << "\n";
+    fout << boost::json::serialize(doc) << "\n";
 }
 
 /** Write decoded/encoded GPS/GAL/BDS/QZS ephemeris messages to a json file
@@ -377,24 +375,24 @@ void RtcmTrace::traceBrdcEph(  // todo aaron, template this for gps/glo?
         return;
     }
 
-    bsoncxx::builder::basic::document doc = {};
+    boost::json::object doc;
 
     GTime nearTime = timeGet();
 
     // Note the Satellite id is not set in rinex correctly as we a mixing GNSS systems.
-    doc.append(kvp("type", "brdcEph"));
-    doc.append(kvp("Mountpoint", rtcmMountpoint));
-    doc.append(kvp("MessageNumber", messCode._to_integral()));
-    doc.append(kvp("MessageType", messCode._to_string()));
-    doc.append(kvp("ReceivedSentTimeGPST", nearTime.to_string()));
-    doc.append(kvp("Type", eph.type._to_string()));
+    doc["type"]                 = "brdcEph";
+    doc["Mountpoint"]           = rtcmMountpoint;
+    doc["MessageNumber"]        = static_cast<int>(messCode);
+    doc["MessageType"]          = enum_to_string(messCode);
+    doc["ReceivedSentTimeGPST"] = nearTime.to_string();
+    doc["Type"]                 = enum_to_string(eph.type);
 
-    doc.append(kvp("ToeGPST", eph.toe.to_string()));
-    doc.append(kvp("TocGPST", eph.toc.to_string()));
+    doc["ToeGPST"] = eph.toe.to_string();
+    doc["TocGPST"] = eph.toc.to_string();
 
     traceBrdcEphBody(doc, eph);
 
-    fout << bsoncxx::to_json(doc) << "\n";
+    fout << boost::json::serialize(doc) << "\n";
 }
 
 /** Write decoded/encoded GAL ephemeris messages to a json file
@@ -413,128 +411,128 @@ void RtcmTrace::traceBrdcEph(RtcmMessageType messCode, Geph& geph)
         return;
     }
 
-    bsoncxx::builder::basic::document doc = {};
+    boost::json::object doc;
 
     GTime nearTime = timeGet();
 
     // Note the Satellite id is not set in rinex correctly as we a mixing GNSS systems.
-    doc.append(kvp("type", "brdcEph"));
-    doc.append(kvp("Mountpoint", rtcmMountpoint));
-    doc.append(kvp("MessageNumber", messCode._to_integral()));
-    doc.append(kvp("MessageType", messCode._to_string()));
-    doc.append(kvp("ReceivedSentTimeGPST", nearTime.to_string()));
-    doc.append(kvp("Sat", geph.Sat.id()));
-    doc.append(kvp("Type", geph.type._to_string()));
+    doc["type"]                 = "brdcEph";
+    doc["Mountpoint"]           = rtcmMountpoint;
+    doc["MessageNumber"]        = static_cast<int>(messCode);
+    doc["MessageType"]          = enum_to_string(messCode);
+    doc["ReceivedSentTimeGPST"] = nearTime.to_string();
+    doc["Sat"]                  = geph.Sat.id();
+    doc["Type"]                 = enum_to_string(geph.type);
 
-    doc.append(kvp("ToeGPST", geph.toe.to_string()));
-    doc.append(kvp("TofGPST", geph.tof.to_string()));
+    doc["ToeGPST"] = geph.toe.to_string();
+    doc["TofGPST"] = geph.tof.to_string();
 
     traceBrdcEphBody(doc, geph);
 
-    fout << bsoncxx::to_json(doc) << "\n";
+    fout << boost::json::serialize(doc) << "\n";
 }
 
-void traceBrdcEphBody(bsoncxx::builder::basic::document& doc, Eph& eph)
+void traceBrdcEphBody(boost::json::object& doc, Eph& eph)
 {
-    doc.append(kvp("Sat", eph.Sat.id()));
-    doc.append(kvp("weekRollOver", eph.weekRollOver));
-    doc.append(kvp("week", eph.week));
-    doc.append(kvp("toes", eph.toes));
-    doc.append(kvp("tocs", eph.tocs));
-    doc.append(kvp("howTow", eph.howTow));
-    doc.append(kvp("toe", eph.toe.to_string()));
-    doc.append(kvp("toc", eph.toc.to_string()));
-    doc.append(kvp("ttm", eph.ttm.to_string()));
+    doc["Sat"]          = eph.Sat.id();
+    doc["weekRollOver"] = eph.weekRollOver;
+    doc["week"]         = eph.week;
+    doc["toes"]         = eph.toes;
+    doc["tocs"]         = eph.tocs;
+    doc["howTow"]       = eph.howTow;
+    doc["toe"]          = eph.toe.to_string();
+    doc["toc"]          = eph.toc.to_string();
+    doc["ttm"]          = eph.ttm.to_string();
 
-    doc.append(kvp("aode", eph.aode));
-    doc.append(kvp("aodc", eph.aodc));
-    doc.append(kvp("iode", eph.iode));
-    doc.append(kvp("iodc", eph.iodc));
+    doc["aode"] = eph.aode;
+    doc["aodc"] = eph.aodc;
+    doc["iode"] = eph.iode;
+    doc["iodc"] = eph.iodc;
 
-    doc.append(kvp("f0", eph.f0));
-    doc.append(kvp("f1", eph.f1));
-    doc.append(kvp("f2", eph.f2));
+    doc["f0"] = eph.f0;
+    doc["f1"] = eph.f1;
+    doc["f2"] = eph.f2;
 
-    doc.append(kvp("sqrtA", eph.sqrtA));
-    doc.append(kvp("A", eph.A));
-    doc.append(kvp("e", eph.e));
-    doc.append(kvp("i0", eph.i0));
-    doc.append(kvp("idot", eph.idot));
-    doc.append(kvp("omg", eph.omg));
-    doc.append(kvp("OMG0", eph.OMG0));
-    doc.append(kvp("OMGd", eph.OMGd));
-    doc.append(kvp("M0", eph.M0));
-    doc.append(kvp("deln", eph.deln));
-    doc.append(kvp("crc", eph.crc));
-    doc.append(kvp("crs", eph.crs));
-    doc.append(kvp("cic", eph.cic));
-    doc.append(kvp("cis", eph.cis));
-    doc.append(kvp("cuc", eph.cuc));
-    doc.append(kvp("cus", eph.cus));
+    doc["sqrtA"] = eph.sqrtA;
+    doc["A"]     = eph.A;
+    doc["e"]     = eph.e;
+    doc["i0"]    = eph.i0;
+    doc["idot"]  = eph.idot;
+    doc["omg"]   = eph.omg;
+    doc["OMG0"]  = eph.OMG0;
+    doc["OMGd"]  = eph.OMGd;
+    doc["M0"]    = eph.M0;
+    doc["deln"]  = eph.deln;
+    doc["crc"]   = eph.crc;
+    doc["crs"]   = eph.crs;
+    doc["cic"]   = eph.cic;
+    doc["cis"]   = eph.cis;
+    doc["cuc"]   = eph.cuc;
+    doc["cus"]   = eph.cus;
 
-    doc.append(kvp("tgd0", eph.tgd[0]));
-    doc.append(kvp("tgd1", eph.tgd[1]));  // GPS/QZS no tgd[1]
-    doc.append(kvp("sva", eph.sva));
+    doc["tgd0"] = eph.tgd[0];
+    doc["tgd1"] = eph.tgd[1];  // GPS/QZS no tgd[1]
+    doc["sva"]  = eph.sva;
 
-    if (eph.Sat.sys == +E_Sys::GPS || eph.Sat.sys == +E_Sys::QZS)
+    if (eph.Sat.sys == E_Sys::GPS || eph.Sat.sys == E_Sys::QZS)
     {
-        doc.append(kvp("ura", eph.ura[0]));
-        doc.append(kvp("svh", eph.svh));
-        doc.append(kvp("code", eph.code));
-        doc.append(kvp("flag", eph.flag));  // QZS no flag
-        doc.append(kvp("fitFlag", eph.fitFlag));
-        doc.append(kvp("fit", eph.fit));
+        doc["ura"]     = eph.ura[0];
+        doc["svh"]     = eph.svh;
+        doc["code"]    = eph.code;
+        doc["flag"]    = eph.flag;  // QZS no flag
+        doc["fitFlag"] = eph.fitFlag;
+        doc["fit"]     = eph.fit;
     }
-    else if (eph.Sat.sys == +E_Sys::GAL)
+    else if (eph.Sat.sys == E_Sys::GAL)
     {
-        doc.append(kvp("SISA", eph.ura[0]));
-        doc.append(kvp("SVHealth", eph.svh));
-        doc.append(kvp("E5aHealth", eph.e5a_hs));
-        doc.append(kvp("E5aDataValidity", eph.e5a_dvs));
-        doc.append(kvp("E5bHealth", eph.e5b_hs));
-        doc.append(kvp("E5bDataValidity", eph.e5b_dvs));
-        doc.append(kvp("E1Health", eph.e1_hs));
-        doc.append(kvp("E1DataValidity", eph.e1_dvs));
-        doc.append(kvp("DataSource", eph.code));
+        doc["SISA"]            = eph.ura[0];
+        doc["SVHealth"]        = eph.svh;
+        doc["E5aHealth"]       = eph.e5a_hs;
+        doc["E5aDataValidity"] = eph.e5a_dvs;
+        doc["E5bHealth"]       = eph.e5b_hs;
+        doc["E5bDataValidity"] = eph.e5b_dvs;
+        doc["E1Health"]        = eph.e1_hs;
+        doc["E1DataValidity"]  = eph.e1_dvs;
+        doc["DataSource"]      = eph.code;
     }
-    else if (eph.Sat.sys == +E_Sys::BDS)
+    else if (eph.Sat.sys == E_Sys::BDS)
     {
-        doc.append(kvp("URA", eph.ura[0]));
-        doc.append(kvp("SVHealth", eph.svh));
+        doc["URA"]      = eph.ura[0];
+        doc["SVHealth"] = eph.svh;
     }
 }
 
-void traceBrdcEphBody(bsoncxx::builder::basic::document& doc, Geph& geph)
+void traceBrdcEphBody(boost::json::object& doc, Geph& geph)
 {
-    doc.append(kvp("ToeSecOfDay", geph.tb));
-    doc.append(kvp("TofHour", geph.tk_hour));
-    doc.append(kvp("TofMin", geph.tk_min));
-    doc.append(kvp("TofSec", geph.tk_sec));
+    doc["ToeSecOfDay"] = geph.tb;
+    doc["TofHour"]     = geph.tk_hour;
+    doc["TofMin"]      = geph.tk_min;
+    doc["TofSec"]      = geph.tk_sec;
 
-    doc.append(kvp("IODE", geph.iode));
+    doc["IODE"] = geph.iode;
 
-    doc.append(kvp("TauN", geph.taun));
-    doc.append(kvp("GammaN", geph.gammaN));
-    doc.append(kvp("DeltaTauN", geph.dtaun));
+    doc["TauN"]      = geph.taun;
+    doc["GammaN"]    = geph.gammaN;
+    doc["DeltaTauN"] = geph.dtaun;
 
-    doc.append(kvp("PosX", geph.pos[0]));
-    doc.append(kvp("PosY", geph.pos[1]));
-    doc.append(kvp("PosZ", geph.pos[2]));
-    doc.append(kvp("VelX", geph.vel[0]));
-    doc.append(kvp("VelY", geph.vel[1]));
-    doc.append(kvp("VelZ", geph.vel[2]));
-    doc.append(kvp("AccX", geph.acc[0]));
-    doc.append(kvp("AccY", geph.acc[1]));
-    doc.append(kvp("AccZ", geph.acc[2]));
+    doc["PosX"] = geph.pos[0];
+    doc["PosY"] = geph.pos[1];
+    doc["PosZ"] = geph.pos[2];
+    doc["VelX"] = geph.vel[0];
+    doc["VelY"] = geph.vel[1];
+    doc["VelZ"] = geph.vel[2];
+    doc["AccX"] = geph.acc[0];
+    doc["AccY"] = geph.acc[1];
+    doc["AccZ"] = geph.acc[2];
 
-    doc.append(kvp("FrquencyNumber", geph.frq));
-    doc.append(kvp("SVHealth", geph.svh));
-    doc.append(kvp("Age", geph.age));
+    doc["FrquencyNumber"] = geph.frq;
+    doc["SVHealth"]       = geph.svh;
+    doc["Age"]            = geph.age;
 
-    doc.append(kvp("GLONASSM", geph.glonassM));
-    doc.append(kvp("NumberOfDayIn4Year", geph.NT));
-    doc.append(kvp("AdditionalData", geph.moreData));
-    doc.append(kvp("4YearIntervalNumber", geph.N4));
+    doc["GLONASSM"]            = geph.glonassM;
+    doc["NumberOfDayIn4Year"]  = geph.NT;
+    doc["AdditionalData"]      = geph.moreData;
+    doc["4YearIntervalNumber"] = geph.N4;
 }
 
 /** Writes nav.satNavMap[].ssrOut to a human-readable file
@@ -662,23 +660,23 @@ void RtcmTrace::traceMSM(RtcmMessageType messCode, GTime time, SatSys Sat, Sig& 
 
     GTime nearTime = timeGet();
 
-    bsoncxx::builder::basic::document doc = {};
-    doc.append(kvp("type", "MSM"));
-    doc.append(kvp("Mountpoint", rtcmMountpoint));
-    doc.append(kvp("MessageNumber", messCode._to_integral()));
-    doc.append(kvp("MessageType", messCode._to_string()));
-    doc.append(kvp("ReceivedSentTimeGPST", nearTime.to_string()));
-    doc.append(kvp("EpochTimeGPST", time.to_string()));
-    doc.append(kvp("Sat", Sat.id()));
-    doc.append(kvp("Code", sig.code._to_string()));
-    doc.append(kvp("Pseudorange", sig.P));
-    doc.append(kvp("CarrierPhase", sig.L));
-    doc.append(kvp("Doppler", sig.D));
-    doc.append(kvp("SNR", sig.snr));
-    doc.append(kvp("LLI", sig.LLI));
-    doc.append(kvp("IsInvalid", sig.invalid));
+    boost::json::object doc;
+    doc["type"]                 = "MSM";
+    doc["Mountpoint"]           = rtcmMountpoint;
+    doc["MessageNumber"]        = static_cast<int>(messCode);
+    doc["MessageType"]          = enum_to_string(messCode);
+    doc["ReceivedSentTimeGPST"] = nearTime.to_string();
+    doc["EpochTimeGPST"]        = time.to_string();
+    doc["Sat"]                  = Sat.id();
+    doc["Code"]                 = enum_to_string(sig.code);
+    doc["Pseudorange"]          = sig.P;
+    doc["CarrierPhase"]         = sig.L;
+    doc["Doppler"]              = sig.D;
+    doc["SNR"]                  = sig.snr;
+    doc["LLI"]                  = sig.LLI;
+    doc["IsInvalid"]            = sig.invalid;
 
-    fout << bsoncxx::to_json(doc) << "\n";
+    fout << boost::json::serialize(doc) << "\n";
 }
 
 /** Write unknown message to a json file
@@ -697,8 +695,8 @@ void RtcmTrace::traceUnknown()
         return;
     }
 
-    bsoncxx::builder::basic::document doc = {};
-    doc.append(kvp("type", "?"));
+    boost::json::object doc;
+    doc["type"] = "?";
 
-    fout << bsoncxx::to_json(doc) << "\n";
+    fout << boost::json::serialize(doc) << "\n";
 }

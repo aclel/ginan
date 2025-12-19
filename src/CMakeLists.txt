@@ -1,21 +1,33 @@
-cmake_minimum_required(VERSION 2.8...3.22)
+cmake_minimum_required(VERSION 3.22)
 cmake_policy(SET CMP0063 NEW)
-list(APPEND CMAKE_PREFIX_PATH "/usr/local/opt/openblas")
 project(ginan)
+
+# Set C++ standard before any other configuration
+set(CMAKE_CXX_STANDARD 20)
+set(CMAKE_CXX_STANDARD_REQUIRED ON)
+set(CMAKE_CXX_EXTENSIONS OFF)
 
 include(CheckPIESupported)
 check_pie_supported()
 
-set (CMAKE_ARCHIVE_OUTPUT_DIRECTORY "${CMAKE_BINARY_DIR}/../../lib")
-set (CMAKE_LIBRARY_OUTPUT_DIRECTORY "${CMAKE_BINARY_DIR}/../../lib")
-set (CMAKE_RUNTIME_OUTPUT_DIRECTORY "${CMAKE_BINARY_DIR}/../../bin")
+# Use absolute paths for output directories to support nested build directories
+set (CMAKE_ARCHIVE_OUTPUT_DIRECTORY "${CMAKE_SOURCE_DIR}/../lib")
+set (CMAKE_LIBRARY_OUTPUT_DIRECTORY "${CMAKE_SOURCE_DIR}/../lib")
+set (CMAKE_RUNTIME_OUTPUT_DIRECTORY "${CMAKE_SOURCE_DIR}/../bin")
 
 set(CMAKE_MODULE_PATH					"${CMAKE_SOURCE_DIR}/cmake")
 set(CMAKE_CXX_VISIBILITY_PRESET     	hidden)
 set(CMAKE_VERBOSE_MAKEFILE				OFF)
 
-if (CMAKE_CXX_COMPILER_ID STREQUAL "AppleClang")
-	message(STATUS "Using Clang complient compiler flags")
+# Platform-specific compiler flags
+if(WIN32)
+	# Windows-specific flags
+	message(STATUS "Using Windows compiler flags")
+	# Note: WIN32_WINNT and LEAN_AND_MEAN are set in toolchain file
+	# Disable some warnings on Windows
+	set(CMAKE_CXX_FLAGS						"${CMAKE_CXX_FLAGS} -Wno-unknown-pragmas")
+elseif (CMAKE_CXX_COMPILER_ID STREQUAL "AppleClang")
+	message(STATUS "Using Clang compliant compiler flags")
 
 	set(CMAKE_CXX_FLAGS						"${CMAKE_CXX_FLAGS} -Wno-shift-overflow")
 	set(CMAKE_CXX_FLAGS						"${CMAKE_CXX_FLAGS} -Wno-string-concatenation")
@@ -27,7 +39,6 @@ else ()
 endif ()
 
 
-	set(CMAKE_CXX_FLAGS						"${CMAKE_CXX_FLAGS} -std=c++2a")
 #	set(CMAKE_CXX_FLAGS						"${CMAKE_CXX_FLAGS} -ggdb3")
 	set(CMAKE_CXX_FLAGS						"${CMAKE_CXX_FLAGS} -fpermissive")
 	set(CMAKE_CXX_FLAGS						"${CMAKE_CXX_FLAGS} -fno-omit-frame-pointer")
@@ -96,7 +107,21 @@ endif()
 
 if(ENABLE_PARALLELISATION)
 	message(STATUS "Setting parallelisation   on")
-	find_package(OpenMP REQUIRED)
+	# For cross-compilation, OpenMP tests may fail but the library works
+	if(CMAKE_CROSSCOMPILING)
+		set(OpenMP_C_FLAGS "-fopenmp -static-libgcc")
+		set(OpenMP_CXX_FLAGS "-fopenmp -static-libgcc")
+		set(OpenMP_C_LIB_NAMES "gomp")
+		set(OpenMP_CXX_LIB_NAMES "gomp")
+		set(OpenMP_gomp_LIBRARY "gomp")
+		find_package(OpenMP)
+		# For Windows cross-compile, link everything statically
+		if(WIN32)
+			set(CMAKE_EXE_LINKER_FLAGS "${CMAKE_EXE_LINKER_FLAGS} -static")
+		endif()
+	else()
+		find_package(OpenMP REQUIRED)
+	endif()
 	set (CMAKE_CXX_FLAGS				"${CMAKE_CXX_FLAGS} ${OpenMP_CXX_FLAGS}")
 	set (CMAKE_C_FLAGS					"${CMAKE_C_FLAGS} ${OpenMP_C_FLAGS}")
 else()
@@ -163,17 +188,51 @@ endif()
 set(YAML_CPP_USE_STATIC_LIBS ON)
 find_package(YAML_CPP 0.6.2 REQUIRED)
 
+# OpenSSL - use MODULE mode for vcpkg compatibility (wrapper handles it)
 find_package(OpenSSL REQUIRED)
 
 #set(Boost_NO_SYSTEM_PATHS ON)
 set(Boost_USE_STATIC_LIBS ON)
-find_package(Boost 1.73.0 REQUIRED COMPONENTS log log_setup date_time system thread program_options serialization timer)
+find_package(Boost 1.75.0 REQUIRED COMPONENTS log log_setup date_time system thread program_options serialization timer json)
 
-find_package(Eigen3 3.3.0)
+# Try CONFIG mode first (for vcpkg), fall back to module mode (for brew/system)
+find_package(Eigen3 3.3.0 CONFIG QUIET)
+if(NOT Eigen3_FOUND)
+    find_package(Eigen3 3.3.0)
+endif()
 include_directories(${EIGEN3_INCLUDE_DIRS})
 
-find_package(mongocxx	REQUIRED)
-find_package(bsoncxx	REQUIRED)
+# MongoDB is optional - platforms like MinGW/Windows may not support it
+# Users can force it off by setting ENABLE_MONGODB=OFF
+# On Windows, MongoDB is disabled by default
+if(WIN32)
+    option(ENABLE_MONGODB "Enable MongoDB support" OFF)
+else()
+    option(ENABLE_MONGODB "Enable MongoDB support" ON)
+endif()
+
+if(ENABLE_MONGODB)
+    # Try CONFIG mode first (for vcpkg), fall back to module mode (for brew/system)
+    find_package(mongocxx CONFIG QUIET)
+    if(mongocxx_FOUND)
+        find_package(bsoncxx CONFIG QUIET)
+        if(bsoncxx_FOUND)
+            set(ENABLE_MONGODB ON)
+            message(STATUS "MongoDB support enabled")
+        else()
+            message(STATUS "MongoDB bsoncxx not found - building without MongoDB support")
+            set(ENABLE_MONGODB OFF)
+        endif()
+    else()
+        message(STATUS "MongoDB mongocxx not found - building without MongoDB support")
+        set(ENABLE_MONGODB OFF)
+    endif()
+else()
+    message(STATUS "MongoDB support disabled by user")
+endif()
+
+# Using local magic_enum header in 3rdparty directory
+
 set(NETCDF_CXX "YES")
 find_package(NetCDF)
 if (NOT NetCDF_FOUND)
@@ -188,15 +247,20 @@ endif()
 # set(OPENBLAS_USE_STATIC_LIBS ON)
 # set(BLA_VENDOR open)
 
-find_package(BLAS)
-if(BLAS_FOUND)
-	set(LAPACK_LIBRARIES "")
-	message(STATUS "Found BLAS library:       " ${BLA_VENDOR})
+find_package(BLAS REQUIRED)
+
+# Try to find LAPACK - OpenBLAS includes LAPACK so it may be found there
+find_package(LAPACK QUIET)
+
+if(LAPACK_FOUND)
+    message(STATUS "Found BLAS library:       ${BLAS_LIBRARIES}")
+    message(STATUS "Found LAPACK library:     ${LAPACK_LIBRARIES}")
 else()
-	set (BLA_VENDOR "")
-	find_package(LAPACK REQUIRED)
-	find_package(BLAS   REQUIRED)
-	message(STATUS "Found LAPACK and BLAS")
+    # OpenBLAS includes LAPACK but FindLAPACK might not detect it
+    # Use BLAS libraries which include LAPACK functionality
+    message(STATUS "Found BLAS library:       ${BLAS_LIBRARIES}")
+    message(STATUS "LAPACK not found separately - assuming BLAS includes LAPACK (OpenBLAS)")
+    set(LAPACK_LIBRARIES ${BLAS_LIBRARIES})
 endif()
 
 if (YAML_CPP_LIB)
@@ -229,6 +293,8 @@ else()
 	message(STATUS "Mongocxx was not found")
 endif()
 
+
+
 message(STATUS "Found C++ compiler:       " ${CMAKE_CXX_COMPILER_ID} " " ${CMAKE_CXX_COMPILER_VERSION})
 configure_file(${CMAKE_CURRENT_SOURCE_DIR}/cpp/pea/peaLibVersion.h.in ${CMAKE_CURRENT_SOURCE_DIR}/cpp/pea/peaLibVersion.h @ONLY)
 
@@ -243,7 +309,7 @@ add_custom_target(updateGit ALL
 
 # Make sure it regenerates every time the project is built
 
-link_directories(/usr/lib64 ${CMAKE_BINARY_DIR}/../../lib)
+link_directories(/usr/lib64 ${CMAKE_LIBRARY_OUTPUT_DIRECTORY})
 
 # CONFIGURE_FILE(${CMAKE_CURRENT_SOURCE_DIR}/cpp/pea/peaCommitVersion.h.in ${CMAKE_CURRENT_SOURCE_DIR}/cpp/pea/peaCommitVersion.h @ONLY)
 

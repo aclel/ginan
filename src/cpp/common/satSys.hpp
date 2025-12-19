@@ -80,7 +80,7 @@ struct SatSys
      */
     operator int() const
     {
-        int intval = (sys << 16) + (prn << 8);
+        int intval = (static_cast<int>(sys) << 16) + (prn << 8);
         return intval;
     }
 
@@ -98,7 +98,7 @@ struct SatSys
      */
     void fromHash(int intval)
     {
-        sys = E_Sys::_from_integral((intval >> 16) & 0xFF);
+        sys = static_cast<E_Sys>((intval >> 16) & 0xFF);
         prn = (intval >> 8) & 0xFF;
     }
 
@@ -194,17 +194,17 @@ struct SatSys
 
     /* Returns a string of this satellite's system id
      */
-    string sysName() const { return sys._to_string(); }
+    string sysName() const { return string(magic_enum::enum_name(sys)); }
 
     template <class ARCHIVE>
     void serialize(ARCHIVE& ar, const unsigned int& version)
     {
-        int sysInt = sys;
+        int sysInt = static_cast<int>(sys);
         ar & sysInt;
         ar & prn;
         try
         {
-            sys = E_Sys::_from_integral(sysInt);
+            sys = static_cast<E_Sys>(sysInt);
         }
         catch (...)
         {

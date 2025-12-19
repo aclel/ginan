@@ -2,7 +2,7 @@
 
 ## Automatic Formatting
 
-This project uses clang-format for automatic code formatting. The formatting rules are defined in the `.clang-format` file in the project root.
+This project uses clang-format (we use version 20) for automatic code formatting. The formatting rules are defined in the `.clang-format` file in the project root.
 
 To format your code:
 ```bash

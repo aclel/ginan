@@ -31,7 +31,7 @@ E_ObsCode str2code(
 
     try
     {
-        code = E_ObsCode::_from_string(cods);
+        code = string_to_enum<E_ObsCode>(cods);
     }
     catch (...)
     {
@@ -81,9 +81,10 @@ bool read_biasSINEX_line(
         return false;
     }
 
-    if (tsys == +E_TimeSys::NONE)
+    if (tsys == E_TimeSys::NONE)
     {
-        BOOST_LOG_TRIVIAL(error) << "Unkown time system for bias SINEX file: " << tsys._to_string();
+        BOOST_LOG_TRIVIAL(error) << "Unkown time system for bias SINEX file: "
+                                 << enum_to_string(tsys);
         return false;
     }
 
@@ -125,7 +126,7 @@ bool read_biasSINEX_line(
         // this should be a satellite, but check its valid		//todo aaron, system for receiver
         // dcbs
 
-        if (Sat.prn == 0 || Sat.sys == +E_Sys::NONE)
+        if (Sat.prn == 0 || Sat.sys == E_Sys::NONE)
         {
             return false;
         }
@@ -156,18 +157,6 @@ bool read_biasSINEX_line(
     /* decoding start/end times */
     entry.tini = sinex_time_text(startTime, tsys);
     entry.tfin = sinex_time_text(endTime, tsys);
-
-    if (entry.tini != GTime::noTime() && entry.tfin != GTime::noTime())
-        entry.refTime = entry.tini + (entry.tfin - entry.tini).to_double() / 2;
-    else if (entry.tini != GTime::noTime() && entry.tfin == GTime::noTime())
-        entry.refTime = entry.tini;
-    else if (entry.tini == GTime::noTime() && entry.tfin != GTime::noTime())
-        entry.refTime = entry.tfin;
-    else
-    {
-        BOOST_LOG_TRIVIAL(error) << "Invalid interval for bias in SINEX file: " << buff;
-        return false;
-    }
 
     /* decoding units */
     double fact = 0;
@@ -237,7 +226,9 @@ bool read_biasSINEX_line(
         }
     }
 
-    if (Sat.sys == +E_Sys::GLO && Sat.prn == 0)
+    updateRefTime(entry);
+
+    if (Sat.sys == E_Sys::GLO && Sat.prn == 0)
     {
         // this seems to be a receiver
         // for ambiguous GLO receiver bias id (i.e. PRN not specified), duplicate bias entry for
@@ -250,7 +241,7 @@ bool read_biasSINEX_line(
             pushBiasEntry(id, entry);
         }
     }
-    else if (Sat.sys == +E_Sys::GLO && Sat.prn != 0)
+    else if (Sat.sys == E_Sys::GLO && Sat.prn != 0)
     {
         // this can be a receiver or satellite
         id = id + ":" + Sat.id();

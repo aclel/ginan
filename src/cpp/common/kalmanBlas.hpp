@@ -15,7 +15,7 @@
  */
 class KalmanFilterBLAS
 {
-public:
+   public:
     /**
      * @brief Compute innovation covariance Q = H*P*H' + R using BLAS
      *
@@ -28,7 +28,7 @@ public:
         const MatrixXd& H,
         const MatrixXd& P,
         const MatrixXd& R,
-        MatrixXd& Q
+        MatrixXd&       Q
     );
 
     /**
@@ -45,10 +45,10 @@ public:
     static bool computeKalmanGain(
         const MatrixXd& H,
         const MatrixXd& P,
-        MatrixXd& Q,           // Non-const: will be modified by LAPACK
-        MatrixXd& K,
-        MatrixXd* Qinv,
-        E_Inverter inverter
+        MatrixXd&       Q,  // Non-const: will be modified by LAPACK
+        MatrixXd&       K,
+        MatrixXd*       Qinv,
+        E_Inverter      inverter
     );
 
     /**
@@ -58,11 +58,7 @@ public:
      * @param P State covariance (numX x numX)
      * @param HP Output matrix (numH x numX)
      */
-    static void computeHP(
-        const MatrixXd& H,
-        const MatrixXd& P,
-        MatrixXd& HP
-    );
+    static void computeHP(const MatrixXd& H, const MatrixXd& P, MatrixXd& HP);
 
     /**
      * @brief Update state vector: xp = x + K*v using BLAS
@@ -81,12 +77,12 @@ public:
         const VectorXd& x,
         const MatrixXd& K,
         const VectorXd& v,
-        VectorXd& xp,
-        VectorXd& dx,
-        int begX,
-        int numX,
-        int begH,
-        int numH
+        VectorXd&       xp,
+        VectorXd&       dx,
+        int             begX,
+        int             numX,
+        int             begH,
+        int             numH
     );
 
     /**
@@ -103,7 +99,7 @@ public:
         const MatrixXd& K,
         const MatrixXd& H,
         const MatrixXd& HP,
-        MatrixXd& Pp
+        MatrixXd&       Pp
     );
 
     /**
@@ -120,7 +116,7 @@ public:
         const MatrixXd& K,
         const MatrixXd& H,
         const MatrixXd& R,
-        MatrixXd& Pp
+        MatrixXd&       Pp
     );
 
     /**
@@ -131,13 +127,9 @@ public:
      * @param inverter Solver method to use
      * @return true if successful, false otherwise
      */
-    static bool solveLinearSystem(
-        MatrixXd& Q,
-        MatrixXd& B,
-        E_Inverter inverter
-    );
+    static bool solveLinearSystem(MatrixXd& Q, MatrixXd& B, E_Inverter inverter);
 
-private:
+   private:
     /**
      * @brief Symmetrize matrix: A = (A + A') / 2
      *

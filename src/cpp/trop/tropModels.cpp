@@ -86,7 +86,7 @@ double tropModelCoef(int ind, VectorPos& pos)
     {
         case E_BasisType::POLYNOMIAL:
         {
-            switch (basis.index)
+            switch (int_to_enum<E_PolyType>(basis.index))
             {
                 case E_PolyType::CONSTANT:
                     return 1;
@@ -238,11 +238,11 @@ double tropModel(
             continue;
 
         tracepdeex(
-            2,
+            3,
             trace,
             "\nTroposphere Model %s %s  %d %d %d",
             time.to_string().c_str(),
-            model._to_string(),
+            enum_to_string(model),
             pos.latDeg(),
             pos.lonDeg(),
             pos.hgt()

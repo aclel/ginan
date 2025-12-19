@@ -43,7 +43,7 @@ E_SerialObject getFilterTypeFromFile(
     string    filename   ///< Path to archive file
 )
 {
-    std::fstream fileStream(filename, std::ifstream::binary | std::ifstream::in);
+    std::fstream fileStream(filename, std::ios::binary | std::ios::in);
 
     if (!fileStream)
     {
@@ -55,7 +55,23 @@ E_SerialObject getFilterTypeFromFile(
     long int itemDelta;
 
     fileStream.seekg(0, fileStream.end);
-    long int fileSize = fileStream.tellg();
+    std::streamoff fileSize = fileStream.tellg();
+
+    // Check if tellg() failed (returns -1 on error)
+    if (fileSize < 0)
+    {
+        BOOST_LOG_TRIVIAL(error) << "Failed to get file size for " << filename
+                                 << " (tellg() returned " << fileSize << ")";
+        return E_SerialObject::NONE;
+    }
+
+    // Log if file is larger than 2GB (potential issue on 32-bit systems)
+    if (fileSize > 2147483647LL)
+    {
+        BOOST_LOG_TRIVIAL(warning) << "RTS file size (" << fileSize << " bytes / "
+                                   << (fileSize / (1024.0 * 1024.0 * 1024.0))
+                                   << " GB) exceeds 2GB - ensure 64-bit file I/O is supported";
+    }
 
     if (startPos < 0)
     {
@@ -66,21 +82,23 @@ E_SerialObject getFilterTypeFromFile(
         fileStream.seekg(startPos - sizeof(itemDelta), fileStream.beg);
     }
 
-    long int currentPosition = fileStream.tellg();
+    std::streamoff currentPosition = fileStream.tellg();
     if ((currentPosition >= fileSize) || (currentPosition < 0))
     {
+        BOOST_LOG_TRIVIAL(error) << "Invalid position after seek: " << currentPosition
+                                 << " (fileSize=" << fileSize << ")";
         return E_SerialObject::NONE;
     }
 
     serial & itemDelta;
 
-    long int itemPosition = currentPosition - itemDelta;
+    std::streamoff itemPosition = currentPosition - itemDelta;
 
     fileStream.seekg(itemPosition, fileStream.beg);
 
     int typeInt;
     serial & typeInt;
-    E_SerialObject type = E_SerialObject::_from_integral(typeInt);
+    E_SerialObject type = int_to_enum<E_SerialObject>(typeInt);
 
     return type;
 }
@@ -92,7 +110,7 @@ void tryPrepareFilterPointers(KFState& kfState, ReceiverMap& receiverMap)
     {
         KFKey kfKey = key;
 
-        if (kfKey.type == +KF::REC_POS)
+        if (kfKey.type == KF::REC_POS)
         {
             // make sure all rec pos are associated with receivers
             receiverMap[kfKey.str].id = kfKey.str;

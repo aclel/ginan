@@ -35,8 +35,14 @@ bool jplEphPos(
     {
         lock_guard<mutex> guard(jplEphMutex);
 
-        result =
-            jpl_pleph(jplEph_ptr, mjdTT.to_double() + JD2MJD, thirdBody, eEarth, r_p, !!vel_ptr);
+        result = jpl_pleph(
+            jplEph_ptr,
+            mjdTT.to_double() + JD2MJD,
+            static_cast<int>(thirdBody),
+            eEarth,
+            r_p,
+            !!vel_ptr
+        );
     }
 
     switch (result)
@@ -87,7 +93,7 @@ bool planetPosEcef(GTime time, E_ThirdBody thirdBody, VectorEcef& rBody, ERPValu
         double pvh[2][3];
         double pvb[2][3];
 
-        if (thirdBody == +E_ThirdBody::SUN)
+        if (thirdBody == E_ThirdBody::SUN)
         {
             Sofa::iauEpv(time, pvh, pvb);
             for (int i = 0; i < 3; i++)
@@ -95,7 +101,7 @@ bool planetPosEcef(GTime time, E_ThirdBody thirdBody, VectorEcef& rBody, ERPValu
                 rBodyEci(i) = -pvh[0][i] * AU;
             }
         }
-        else if (thirdBody == +E_ThirdBody::MOON)
+        else if (thirdBody == E_ThirdBody::MOON)
         {
             Sofa::iauMoon(time, pvh);
             for (int i = 0; i < 3; i++)

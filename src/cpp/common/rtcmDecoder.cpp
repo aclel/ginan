@@ -93,7 +93,7 @@ E_RTCMSubmessage RtcmDecoder::decodeCustomId(vector<unsigned char>& message)
     int messageNumber       = getbituInc(message, i, 12);
     int customMessageNumber = getbituInc(message, i, 8);
 
-    E_RTCMSubmessage customType = E_RTCMSubmessage::_from_integral(customMessageNumber);
+    E_RTCMSubmessage customType = int_to_enum<E_RTCMSubmessage>(customMessageNumber);
 
     return customType;
 }
@@ -105,7 +105,7 @@ GTime RtcmDecoder::decodeCustomTimestamp(vector<unsigned char>& data)
     int messageNumber       = getbituInc(data, i, 12);
     int customMessageNumber = getbituInc(data, i, 8);
 
-    E_RTCMSubmessage customType = E_RTCMSubmessage::_from_integral(customMessageNumber);
+    E_RTCMSubmessage customType = int_to_enum<E_RTCMSubmessage>(customMessageNumber);
 
     GTime time;
 
@@ -134,7 +134,7 @@ void RtcmDecoder::decodeSSR(vector<unsigned char>& data)  ///< stream data
     RtcmMessageType messCode;
     try
     {
-        messCode = RtcmMessageType::_from_integral(messageNumber);
+        messCode = messageNumberToRtcmType(messageNumber);
     }
     catch (...)
     {
@@ -142,24 +142,24 @@ void RtcmDecoder::decodeSSR(vector<unsigned char>& data)  ///< stream data
         return;
     }
 
-    string messCodeStr = messCode._to_string();
+    string messCodeStr = enum_to_string(messCode);
     string messTypeStr = messCodeStr.substr(8);
 
     E_Sys sys = rtcmMessageSystemMap[messCode];
 
-    if (sys == +E_Sys::NONE)
+    if (sys == E_Sys::NONE)
     {
         BOOST_LOG_TRIVIAL(error) << "Invalid message code system :" << messCode;
         return;
     }
 
-    if (sys != +E_Sys::GPS && sys != +E_Sys::GLO && sys != +E_Sys::GAL && sys != +E_Sys::QZS &&
-        sys != +E_Sys::SBS && sys != +E_Sys::BDS)
+    if (sys != E_Sys::GPS && sys != E_Sys::GLO && sys != E_Sys::GAL && sys != E_Sys::QZS &&
+        sys != E_Sys::SBS && sys != E_Sys::BDS)
     {
         BOOST_LOG_TRIVIAL(error) << "Unrecognised message in " << __FUNCTION__;
     }
 
-    // if (sys == +E_Sys::BDS)
+    // if (sys == E_Sys::BDS)
     // {
     // 	printf ("\nRTCM %4d: ", messageNumber);
     // 	for (auto& dat : data) printf("%02X",dat);
@@ -236,12 +236,12 @@ void RtcmDecoder::decodeSSR(vector<unsigned char>& data)  ///< stream data
 
     GTime receivedTime;
     GTime t0;
-    if (sys == +E_Sys::GLO)
+    if (sys == E_Sys::GLO)
     {
         receivedTime = GTime(RTod(epochTime1s), nearTime);
         t0           = GTime(RTod(referenceTime), nearTime);
     }
-    else if (sys == +E_Sys::BDS)
+    else if (sys == E_Sys::BDS)
     {
         receivedTime = GTime(BTow(epochTime1s), nearTime);
         t0           = GTime(BTow(referenceTime), nearTime);
@@ -415,7 +415,7 @@ void RtcmDecoder::decodeSSR(vector<unsigned char>& data)  ///< stream data
 
             BiasEntry entry;
             string    id;
-            if (Sat.sys == +E_Sys::GLO)
+            if (Sat.sys == E_Sys::GLO)
                 id = Sat.id() + ":" + Sat.id();
             else
                 id = Sat.id() + ":" + Sat.sysChar();
@@ -434,27 +434,27 @@ void RtcmDecoder::decodeSSR(vector<unsigned char>& data)  ///< stream data
                 try
                 {
                     E_ObsCode obsCode;
-                    if (sys == +E_Sys::GPS)
+                    if (sys == E_Sys::GPS)
                     {
                         obsCode = mCodes_gps.right.at(rtcmCode);
                     }
-                    else if (sys == +E_Sys::GLO)
+                    else if (sys == E_Sys::GLO)
                     {
                         obsCode = mCodes_glo.right.at(rtcmCode);
                     }
-                    else if (sys == +E_Sys::GAL)
+                    else if (sys == E_Sys::GAL)
                     {
                         obsCode = mCodes_gal.right.at(rtcmCode);
                     }
-                    else if (sys == +E_Sys::QZS)
+                    else if (sys == E_Sys::QZS)
                     {
                         obsCode = mCodes_qzs.right.at(rtcmCode);
                     }
-                    else if (sys == +E_Sys::BDS)
+                    else if (sys == E_Sys::BDS)
                     {
                         obsCode = mCodes_bds.right.at(rtcmCode);
                     }
-                    else if (sys == +E_Sys::SBS)
+                    else if (sys == E_Sys::SBS)
                     {
                         obsCode = mCodes_sbs.right.at(rtcmCode);
                     }
@@ -476,13 +476,14 @@ void RtcmDecoder::decodeSSR(vector<unsigned char>& data)  ///< stream data
                     entry.slop = 0;
                     entry.slpv = 0;
 
+                    updateRefTime(entry);
                     pushBiasEntry(id, entry);
                     tracepdeex(
                         5,
                         std::cout,
                         "\n#RTCM_SSR CODBIA for %s %s: %.4f",
                         Sat.id().c_str(),
-                        obsCode._to_string(),
+                        enum_to_string(obsCode),
                         bias
                     );
                 }
@@ -520,7 +521,7 @@ void RtcmDecoder::decodeSSR(vector<unsigned char>& data)  ///< stream data
 
             BiasEntry entry;
             string    id;
-            if (Sat.sys == +E_Sys::GLO)
+            if (Sat.sys == E_Sys::GLO)
                 id = Sat.id() + ":" + Sat.id();
             else
                 id = Sat.id() + ":" + Sat.sysChar();
@@ -543,27 +544,27 @@ void RtcmDecoder::decodeSSR(vector<unsigned char>& data)  ///< stream data
                 try
                 {
                     E_ObsCode obsCode;
-                    if (sys == +E_Sys::GPS)
+                    if (sys == E_Sys::GPS)
                     {
                         obsCode = mCodes_gps.right.at(rtcmCode);
                     }
-                    else if (sys == +E_Sys::GLO)
+                    else if (sys == E_Sys::GLO)
                     {
                         obsCode = mCodes_glo.right.at(rtcmCode);
                     }
-                    else if (sys == +E_Sys::GAL)
+                    else if (sys == E_Sys::GAL)
                     {
                         obsCode = mCodes_gal.right.at(rtcmCode);
                     }
-                    else if (sys == +E_Sys::QZS)
+                    else if (sys == E_Sys::QZS)
                     {
                         obsCode = mCodes_qzs.right.at(rtcmCode);
                     }
-                    else if (sys == +E_Sys::BDS)
+                    else if (sys == E_Sys::BDS)
                     {
                         obsCode = mCodes_bds.right.at(rtcmCode);
                     }
-                    else if (sys == +E_Sys::SBS)
+                    else if (sys == E_Sys::SBS)
                     {
                         obsCode = mCodes_sbs.right.at(rtcmCode);
                     }
@@ -587,13 +588,14 @@ void RtcmDecoder::decodeSSR(vector<unsigned char>& data)  ///< stream data
                     entry.slop = 0;
                     entry.slpv = 0;
 
+                    updateRefTime(entry);
                     pushBiasEntry(id, entry);
                     tracepdeex(
                         5,
                         std::cout,
                         "\n#RTCM_SSR PHSBIA for %s %s: %.4f",
                         Sat.id().c_str(),
-                        obsCode._to_string(),
+                        enum_to_string(obsCode),
                         bias
                     );
                 }
@@ -623,7 +625,7 @@ void RtcmDecoder::decodeEphemeris(vector<unsigned char>& data)  ///< stream data
     RtcmMessageType messCode;
     try
     {
-        messCode = RtcmMessageType::_from_integral(messageNumber);
+        messCode = messageNumberToRtcmType(messageNumber);
     }
     catch (...)
     {
@@ -632,7 +634,7 @@ void RtcmDecoder::decodeEphemeris(vector<unsigned char>& data)  ///< stream data
     }
 
     E_Sys sys = E_Sys::NONE;
-    switch (messageNumber)
+    switch (messCode)
     {
         case RtcmMessageType::GPS_EPHEMERIS:
             sys = E_Sys::GPS;
@@ -659,7 +661,7 @@ void RtcmDecoder::decodeEphemeris(vector<unsigned char>& data)  ///< stream data
 
     bool failure = false;
 
-    if (sys == +E_Sys::GPS)
+    if (sys == E_Sys::GPS)
     {
         if (i + 488 - 12 > data.size() * 8)
         {
@@ -721,7 +723,7 @@ void RtcmDecoder::decodeEphemeris(vector<unsigned char>& data)  ///< stream data
         if (acsConfig.use_tgd_bias)
             decomposeTGDBias(eph.Sat, eph.tgd[0]);
     }
-    else if (sys == +E_Sys::GLO)
+    else if (sys == E_Sys::GLO)
     {
         if (i + 360 - 12 > data.size() * 8)
         {
@@ -776,7 +778,7 @@ void RtcmDecoder::decodeEphemeris(vector<unsigned char>& data)  ///< stream data
         geph.toe       = GTime(toes, nearTime);
         geph.tof       = GTime(tofs, nearTime);
     }
-    else if (sys == +E_Sys::BDS)
+    else if (sys == E_Sys::BDS)
     {
         if (i + 511 - 12 > data.size() * 8)
         {
@@ -830,7 +832,7 @@ void RtcmDecoder::decodeEphemeris(vector<unsigned char>& data)  ///< stream data
         eph.toe = GTime(BTow(eph.toes), nearTime);
         eph.toc = GTime(BTow(eph.tocs), nearTime);
     }
-    else if (sys == +E_Sys::QZS)
+    else if (sys == E_Sys::QZS)
     {
         if (i + 485 - 12 > data.size() * 8)
         {
@@ -885,9 +887,9 @@ void RtcmDecoder::decodeEphemeris(vector<unsigned char>& data)  ///< stream data
         if (acsConfig.use_tgd_bias)
             decomposeTGDBias(eph.Sat, eph.tgd[0]);
     }
-    else if (sys == +E_Sys::GAL)
+    else if (sys == E_Sys::GAL)
     {
-        if (messageNumber == RtcmMessageType::GAL_FNAV_EPHEMERIS)
+        if (messCode == RtcmMessageType::GAL_FNAV_EPHEMERIS)
         {
             if (i + 496 - 12 > data.size() * 8)
             {
@@ -897,7 +899,7 @@ void RtcmDecoder::decodeEphemeris(vector<unsigned char>& data)  ///< stream data
 
             eph.type = E_NavMsgType::FNAV;
         }
-        else if (messageNumber == RtcmMessageType::GAL_INAV_EPHEMERIS)
+        else if (messCode == RtcmMessageType::GAL_INAV_EPHEMERIS)
         {
             if (i + 504 - 12 > data.size() * 8)
             {
@@ -943,7 +945,7 @@ void RtcmDecoder::decodeEphemeris(vector<unsigned char>& data)  ///< stream data
         eph.OMGd   = getbitsInc(data, i, 24) * P2_43 * SC2RAD;
         eph.tgd[0] = getbitsInc(data, i, 10) * P2_32;
 
-        if (messageNumber == RtcmMessageType::GAL_FNAV_EPHEMERIS)
+        if (messCode == RtcmMessageType::GAL_FNAV_EPHEMERIS)
         {
             eph.e5a_hs  = getbituInc(data, i, 2);  // OSHS
             eph.e5a_dvs = getbituInc(data, i, 1);  // OSDVS
@@ -953,7 +955,7 @@ void RtcmDecoder::decodeEphemeris(vector<unsigned char>& data)  ///< stream data
             eph.svh  = (E_Svh)svh;
             eph.code = (1 << 1) + (1 << 8);  // data source = F/NAV+E5a
         }
-        else if (messageNumber == RtcmMessageType::GAL_INAV_EPHEMERIS)
+        else if (messCode == RtcmMessageType::GAL_INAV_EPHEMERIS)
         {
             eph.tgd[1]  = getbitsInc(data, i, 10) * P2_32;  // E5b/E1
             eph.e5b_hs  = getbituInc(data, i, 2);           // E5b OSHS
@@ -983,7 +985,7 @@ void RtcmDecoder::decodeEphemeris(vector<unsigned char>& data)  ///< stream data
         return;
     }
 
-    if (sys == +E_Sys::GPS || sys == +E_Sys::GAL || sys == +E_Sys::BDS || sys == +E_Sys::QZS)
+    if (sys == E_Sys::GPS || sys == E_Sys::GAL || sys == E_Sys::BDS || sys == E_Sys::QZS)
     {
         nav.ephMap[eph.Sat][eph.type][eph.toe] = eph;
 
@@ -997,7 +999,7 @@ void RtcmDecoder::decodeEphemeris(vector<unsigned char>& data)  ///< stream data
         if (acsConfig.output_decoded_rtcm_json)
             traceBrdcEph(messCode, eph);
     }
-    else if (sys == +E_Sys::GLO)
+    else if (sys == E_Sys::GLO)
     {
         nav.gephMap[geph.Sat][geph.type][geph.toe] = geph;
 
@@ -1237,7 +1239,7 @@ ObsList RtcmDecoder::decodeMSM(vector<unsigned char>& data)
     RtcmMessageType messCode;
     try
     {
-        messCode = RtcmMessageType::_from_integral(messageNumber);
+        messCode = messageNumberToRtcmType(messageNumber);
     }
     catch (...)
     {
@@ -1329,7 +1331,7 @@ ObsList RtcmDecoder::decodeMSM(vector<unsigned char>& data)
             return obsList;
     }
 
-    if (rtcmsys == +E_Sys::GLO)
+    if (rtcmsys == E_Sys::GLO)
     {
         int dowi = (epoch_time_ >> 27);
         int todi = (epoch_time_ & 0x7FFFFFF);
@@ -1368,8 +1370,8 @@ ObsList RtcmDecoder::decodeMSM(vector<unsigned char>& data)
         bool mask = getbituInc(data, i, 1);
         if (mask)
         {
-            int code = signal_to_code(rtcmsys, sig + 1);
-            signalMaskList.push_back(E_ObsCode::_from_integral(code));
+            E_ObsCode code = signal_to_code(rtcmsys, sig + 1);
+            signalMaskList.push_back(code);
         }
     }
 
@@ -1457,14 +1459,14 @@ ObsList RtcmDecoder::decodeMSM(vector<unsigned char>& data)
         {
             int extended_sat_info = getbituInc(data, i, 4);
 
-            if (rtcmsys == +E_Sys::GLO)
+            if (rtcmsys == E_Sys::GLO)
             {
                 GLOFreqShift[obs.Sat][G1] = DFRQ1_GLO * (extended_sat_info - 7);
                 GLOFreqShift[obs.Sat][G2] = DFRQ2_GLO * (extended_sat_info - 7);
             }
         }
     }
-    else if (rtcmsys == +E_Sys::GLO)
+    else if (rtcmsys == E_Sys::GLO)
     {
         for (auto& obs : only<GObs>(obsList))
         {
@@ -1601,7 +1603,7 @@ ObsList RtcmDecoder::decodeMSM(vector<unsigned char>& data)
             for (auto& sig : sigList)
             {
                 double freqcy = carrierFrequency[ft];
-                if (rtcmsys == +E_Sys::GLO)
+                if (rtcmsys == E_Sys::GLO)
                     freqcy += GLOFreqShift[obs.Sat][ft];
 
                 sig.P *= CLIGHT / 1000;     // ms  -> metre
@@ -1613,7 +1615,7 @@ ObsList RtcmDecoder::decodeMSM(vector<unsigned char>& data)
                     obs.time.to_string().c_str(),
                     obs.Sat.id().c_str(),
                     ft,
-                    sig.code._to_string(),
+                    enum_to_string(sig.code).c_str(),
                     sig.P,
                     sig.L
                 );
@@ -1640,94 +1642,94 @@ E_ReturnType RtcmDecoder::decode(vector<unsigned char>& message)
 {
     E_ReturnType retVal = E_ReturnType::OK;
 
-    int messageNumber = getbitu(message, 0, 12);
+    int             messageNumber = getbitu(message, 0, 12);
+    RtcmMessageType messCode      = messageNumberToRtcmType(messageNumber);
 
-    // 	std::cout << "\n" << "Received " <<
-    // RtcmMessageType::_from_integral(messageNumber)._to_string();
+    // 	std::cout << "\n" << "Received " << enum_to_string(messageNumberToRtcmType(messageNumber));
 
-    switch (messageNumber)
+    switch (messCode)
     {
         default:
             retVal = E_ReturnType::UNSUPPORTED;
             break;
 
-        case +RtcmMessageType::CUSTOM:
+        case RtcmMessageType::CUSTOM:
             retVal = decodeCustom(message);
             break;
-        case +RtcmMessageType::GPS_EPHEMERIS:       // fallthrough
-        case +RtcmMessageType::GLO_EPHEMERIS:       // fallthrough
-        case +RtcmMessageType::BDS_EPHEMERIS:       // fallthrough
-        case +RtcmMessageType::QZS_EPHEMERIS:       // fallthrough
-        case +RtcmMessageType::GAL_INAV_EPHEMERIS:  // fallthrough
-        case +RtcmMessageType::GAL_FNAV_EPHEMERIS:
+        case RtcmMessageType::GPS_EPHEMERIS:       // fallthrough
+        case RtcmMessageType::GLO_EPHEMERIS:       // fallthrough
+        case RtcmMessageType::BDS_EPHEMERIS:       // fallthrough
+        case RtcmMessageType::QZS_EPHEMERIS:       // fallthrough
+        case RtcmMessageType::GAL_INAV_EPHEMERIS:  // fallthrough
+        case RtcmMessageType::GAL_FNAV_EPHEMERIS:
             decodeEphemeris(message);
             break;
 
-        case +RtcmMessageType::GPS_SSR_ORB_CORR:     // fallthrough
-        case +RtcmMessageType::GPS_SSR_CLK_CORR:     // fallthrough
-        case +RtcmMessageType::GPS_SSR_COMB_CORR:    // fallthrough
-        case +RtcmMessageType::GPS_SSR_CODE_BIAS:    // fallthrough
-        case +RtcmMessageType::GPS_SSR_PHASE_BIAS:   // fallthrough
-        case +RtcmMessageType::GPS_SSR_URA:          // fallthrough
-        case +RtcmMessageType::GPS_SSR_HR_CLK_CORR:  // fallthrough
-        case +RtcmMessageType::GLO_SSR_ORB_CORR:     // fallthrough
-        case +RtcmMessageType::GLO_SSR_CLK_CORR:     // fallthrough
-        case +RtcmMessageType::GLO_SSR_COMB_CORR:    // fallthrough
-        case +RtcmMessageType::GLO_SSR_CODE_BIAS:    // fallthrough
-        case +RtcmMessageType::GLO_SSR_PHASE_BIAS:   // fallthrough
-        case +RtcmMessageType::GLO_SSR_URA:          // fallthrough
-        case +RtcmMessageType::GLO_SSR_HR_CLK_CORR:  // fallthrough
-        case +RtcmMessageType::GAL_SSR_ORB_CORR:     // fallthrough
-        case +RtcmMessageType::GAL_SSR_CLK_CORR:     // fallthrough
-        case +RtcmMessageType::GAL_SSR_COMB_CORR:    // fallthrough
-        case +RtcmMessageType::GAL_SSR_CODE_BIAS:    // fallthrough
-        case +RtcmMessageType::GAL_SSR_PHASE_BIAS:   // fallthrough
-        case +RtcmMessageType::GAL_SSR_URA:          // fallthrough
-        case +RtcmMessageType::GAL_SSR_HR_CLK_CORR:  // fallthrough
-        case +RtcmMessageType::QZS_SSR_ORB_CORR:     // fallthrough
-        case +RtcmMessageType::QZS_SSR_CLK_CORR:     // fallthrough
-        case +RtcmMessageType::QZS_SSR_COMB_CORR:    // fallthrough
-        case +RtcmMessageType::QZS_SSR_CODE_BIAS:    // fallthrough
-        case +RtcmMessageType::QZS_SSR_PHASE_BIAS:   // fallthrough
-        case +RtcmMessageType::QZS_SSR_URA:          // fallthrough
-        case +RtcmMessageType::QZS_SSR_HR_CLK_CORR:  // fallthrough
-        case +RtcmMessageType::BDS_SSR_ORB_CORR:     // fallthrough
-        case +RtcmMessageType::BDS_SSR_CLK_CORR:     // fallthrough
-        case +RtcmMessageType::BDS_SSR_COMB_CORR:    // fallthrough
-        case +RtcmMessageType::BDS_SSR_CODE_BIAS:    // fallthrough
-        case +RtcmMessageType::BDS_SSR_PHASE_BIAS:   // fallthrough
-        case +RtcmMessageType::BDS_SSR_URA:          // fallthrough
-        case +RtcmMessageType::BDS_SSR_HR_CLK_CORR:  // fallthrough
-        case +RtcmMessageType::SBS_SSR_ORB_CORR:     // fallthrough
-        case +RtcmMessageType::SBS_SSR_CLK_CORR:     // fallthrough
-        case +RtcmMessageType::SBS_SSR_COMB_CORR:    // fallthrough
-        case +RtcmMessageType::SBS_SSR_CODE_BIAS:    // fallthrough
-        case +RtcmMessageType::SBS_SSR_PHASE_BIAS:   // fallthrough
-        case +RtcmMessageType::SBS_SSR_URA:          // fallthrough
-        case +RtcmMessageType::SBS_SSR_HR_CLK_CORR:
+        case RtcmMessageType::GPS_SSR_ORB_CORR:     // fallthrough
+        case RtcmMessageType::GPS_SSR_CLK_CORR:     // fallthrough
+        case RtcmMessageType::GPS_SSR_COMB_CORR:    // fallthrough
+        case RtcmMessageType::GPS_SSR_CODE_BIAS:    // fallthrough
+        case RtcmMessageType::GPS_SSR_PHASE_BIAS:   // fallthrough
+        case RtcmMessageType::GPS_SSR_URA:          // fallthrough
+        case RtcmMessageType::GPS_SSR_HR_CLK_CORR:  // fallthrough
+        case RtcmMessageType::GLO_SSR_ORB_CORR:     // fallthrough
+        case RtcmMessageType::GLO_SSR_CLK_CORR:     // fallthrough
+        case RtcmMessageType::GLO_SSR_COMB_CORR:    // fallthrough
+        case RtcmMessageType::GLO_SSR_CODE_BIAS:    // fallthrough
+        case RtcmMessageType::GLO_SSR_PHASE_BIAS:   // fallthrough
+        case RtcmMessageType::GLO_SSR_URA:          // fallthrough
+        case RtcmMessageType::GLO_SSR_HR_CLK_CORR:  // fallthrough
+        case RtcmMessageType::GAL_SSR_ORB_CORR:     // fallthrough
+        case RtcmMessageType::GAL_SSR_CLK_CORR:     // fallthrough
+        case RtcmMessageType::GAL_SSR_COMB_CORR:    // fallthrough
+        case RtcmMessageType::GAL_SSR_CODE_BIAS:    // fallthrough
+        case RtcmMessageType::GAL_SSR_PHASE_BIAS:   // fallthrough
+        case RtcmMessageType::GAL_SSR_URA:          // fallthrough
+        case RtcmMessageType::GAL_SSR_HR_CLK_CORR:  // fallthrough
+        case RtcmMessageType::QZS_SSR_ORB_CORR:     // fallthrough
+        case RtcmMessageType::QZS_SSR_CLK_CORR:     // fallthrough
+        case RtcmMessageType::QZS_SSR_COMB_CORR:    // fallthrough
+        case RtcmMessageType::QZS_SSR_CODE_BIAS:    // fallthrough
+        case RtcmMessageType::QZS_SSR_PHASE_BIAS:   // fallthrough
+        case RtcmMessageType::QZS_SSR_URA:          // fallthrough
+        case RtcmMessageType::QZS_SSR_HR_CLK_CORR:  // fallthrough
+        case RtcmMessageType::BDS_SSR_ORB_CORR:     // fallthrough
+        case RtcmMessageType::BDS_SSR_CLK_CORR:     // fallthrough
+        case RtcmMessageType::BDS_SSR_COMB_CORR:    // fallthrough
+        case RtcmMessageType::BDS_SSR_CODE_BIAS:    // fallthrough
+        case RtcmMessageType::BDS_SSR_PHASE_BIAS:   // fallthrough
+        case RtcmMessageType::BDS_SSR_URA:          // fallthrough
+        case RtcmMessageType::BDS_SSR_HR_CLK_CORR:  // fallthrough
+        case RtcmMessageType::SBS_SSR_ORB_CORR:     // fallthrough
+        case RtcmMessageType::SBS_SSR_CLK_CORR:     // fallthrough
+        case RtcmMessageType::SBS_SSR_COMB_CORR:    // fallthrough
+        case RtcmMessageType::SBS_SSR_CODE_BIAS:    // fallthrough
+        case RtcmMessageType::SBS_SSR_PHASE_BIAS:   // fallthrough
+        case RtcmMessageType::SBS_SSR_URA:          // fallthrough
+        case RtcmMessageType::SBS_SSR_HR_CLK_CORR:
             decodeSSR(message);
             break;
 
-        case +RtcmMessageType::MSM4_GPS:      // fallthrough
-        case +RtcmMessageType::MSM4_GLONASS:  // fallthrough
-        case +RtcmMessageType::MSM4_GALILEO:  // fallthrough
-        case +RtcmMessageType::MSM4_QZSS:     // fallthrough
-        case +RtcmMessageType::MSM4_BEIDOU:   // fallthrough
-        case +RtcmMessageType::MSM5_GPS:      // fallthrough
-        case +RtcmMessageType::MSM5_GLONASS:  // fallthrough
-        case +RtcmMessageType::MSM5_GALILEO:  // fallthrough
-        case +RtcmMessageType::MSM5_QZSS:     // fallthrough
-        case +RtcmMessageType::MSM5_BEIDOU:   // fallthrough
-        case +RtcmMessageType::MSM6_GPS:      // fallthrough
-        case +RtcmMessageType::MSM6_GLONASS:  // fallthrough
-        case +RtcmMessageType::MSM6_GALILEO:  // fallthrough
-        case +RtcmMessageType::MSM6_QZSS:     // fallthrough
-        case +RtcmMessageType::MSM6_BEIDOU:   // fallthrough
-        case +RtcmMessageType::MSM7_GPS:      // fallthrough
-        case +RtcmMessageType::MSM7_GLONASS:  // fallthrough
-        case +RtcmMessageType::MSM7_GALILEO:  // fallthrough
-        case +RtcmMessageType::MSM7_QZSS:     // fallthrough
-        case +RtcmMessageType::MSM7_BEIDOU:   // fallthrough
+        case RtcmMessageType::MSM4_GPS:      // fallthrough
+        case RtcmMessageType::MSM4_GLONASS:  // fallthrough
+        case RtcmMessageType::MSM4_GALILEO:  // fallthrough
+        case RtcmMessageType::MSM4_QZSS:     // fallthrough
+        case RtcmMessageType::MSM4_BEIDOU:   // fallthrough
+        case RtcmMessageType::MSM5_GPS:      // fallthrough
+        case RtcmMessageType::MSM5_GLONASS:  // fallthrough
+        case RtcmMessageType::MSM5_GALILEO:  // fallthrough
+        case RtcmMessageType::MSM5_QZSS:     // fallthrough
+        case RtcmMessageType::MSM5_BEIDOU:   // fallthrough
+        case RtcmMessageType::MSM6_GPS:      // fallthrough
+        case RtcmMessageType::MSM6_GLONASS:  // fallthrough
+        case RtcmMessageType::MSM6_GALILEO:  // fallthrough
+        case RtcmMessageType::MSM6_QZSS:     // fallthrough
+        case RtcmMessageType::MSM6_BEIDOU:   // fallthrough
+        case RtcmMessageType::MSM7_GPS:      // fallthrough
+        case RtcmMessageType::MSM7_GLONASS:  // fallthrough
+        case RtcmMessageType::MSM7_GALILEO:  // fallthrough
+        case RtcmMessageType::MSM7_QZSS:     // fallthrough
+        case RtcmMessageType::MSM7_BEIDOU:   // fallthrough
         {
             ObsList obsList = decodeMSM(message);
 
@@ -1767,11 +1769,11 @@ E_ReturnType RtcmDecoder::decode(vector<unsigned char>& message)
             break;
         }
 
-        case +RtcmMessageType::IGS_SSR:
+        case RtcmMessageType::IGS_SSR:
             if (decodeigsSSR(message, rtcmTime()) == E_ReturnType::WAIT)
                 retVal = E_ReturnType::WAIT;
             break;
-        case +RtcmMessageType::COMPACT_SSR:
+        case RtcmMessageType::COMPACT_SSR:
             if (decodecompactSSR(message, rtcmTime()) == E_ReturnType::WAIT)
                 retVal = E_ReturnType::WAIT;
             break;

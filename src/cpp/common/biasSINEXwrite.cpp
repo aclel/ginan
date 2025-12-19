@@ -18,10 +18,10 @@ string code2str(
     E_MeasType measType  ///< Measurement type of this observation - CODE/PHAS
 )
 {
-    if (code == +E_ObsCode::NONE)
+    if (code == E_ObsCode::NONE)
         return "";
 
-    string outstr = code._to_string();
+    string outstr = enum_to_string(code);
 
     char head;
     if (measType == PHAS)
@@ -41,11 +41,11 @@ string biasType(
     E_ObsCode code2   ///< Secondary code of observation for the bias
 )
 {
-    if (code1 != +E_ObsCode::NONE && code2 != +E_ObsCode::NONE)
+    if (code1 != E_ObsCode::NONE && code2 != E_ObsCode::NONE)
         return "DSB";
-    else if (code1 != +E_ObsCode::NONE && code2 == +E_ObsCode::NONE)
+    else if (code1 != E_ObsCode::NONE && code2 == E_ObsCode::NONE)
         return "OSB";
-    else if (code1 == +E_ObsCode::NONE && code2 != +E_ObsCode::NONE)
+    else if (code1 == E_ObsCode::NONE && code2 != E_ObsCode::NONE)
         return "OSB";
     else
         return "NONE";
@@ -159,7 +159,12 @@ void writeBSINEXHeader(
 
     auto& recOpts  = acsConfig.getRecOpts("global");
     E_Sys refConst = recOpts.receiver_reference_system;
-    tracepdeex(0, trace, " RECEIVER_CLOCK_REFERENCE_GNSS           %c\n", refConst._to_string()[0]);
+    tracepdeex(
+        0,
+        trace,
+        " RECEIVER_CLOCK_REFERENCE_GNSS           %c\n",
+        enum_to_string(refConst)[0]
+    );
 
     for (auto& [sys, solve] : acsConfig.solve_amb_for)
     {
@@ -191,7 +196,7 @@ void writeBSINEXHeader(
         // 		E_ObsCode code1= acsConfig.clock_codesL1[sys];
         // 		E_ObsCode code2= acsConfig.clock_codesL2[sys];
         // 		tracepdeex(0, trace, " SATELLITE_CLOCK_REFERENCE_OBSERVABLES   %c  %s  %s\n",
-        // sysChar,code1._to_string(),code2._to_string());
+        // sysChar,enum_to_string(code1),enum_to_string(code2));
     }
     tracepdeex(0, trace, "-BIAS/DESCRIPTION\n");
 
@@ -348,7 +353,7 @@ int addBiasEntry(
         BiasEntry entry;
         entry.name = kfKey.str;
         entry.Sat  = kfKey.Sat;
-        entry.cod1 = E_ObsCode::_from_integral(kfKey.num);
+        entry.cod1 = int_to_enum<E_ObsCode>(kfKey.num);
         entry.cod2 = E_ObsCode::NONE;
 
         entry.measType = measType;
@@ -407,7 +412,7 @@ void updateBiasOutput(
     if (measType == E_MeasType::PHAS)
         key.type = KF::PHASE_BIAS;
 
-    for (E_Sys sys : E_Sys::_values())
+    for (E_Sys sys : magic_enum::enum_values<E_Sys>())
     {
         if (acsConfig.process_sys[sys] == false)
             continue;
@@ -431,7 +436,7 @@ void updateBiasOutput(
                 {
                     key.Sat = Sat;
                     key.str = "";
-                    key.num = obsCode;
+                    key.num = static_cast<int>(obsCode);
 
                     if (bias != 0)
                         addBiasEntry(trace, tini, tfin, key, measType, bias, bvar);
@@ -468,7 +473,7 @@ void updateBiasOutput(
                 {
                     key.Sat = sat0;
                     key.str = id;
-                    key.num = obsCode;
+                    key.num = static_cast<int>(obsCode);
 
                     if (bias != 0)
                         addBiasEntry(trace, tini, tfin, key, measType, bias, bvar);
@@ -585,9 +590,9 @@ void writeBiasSinex(
             tracepdeex(
                 5,
                 trace,
-                "\n CODE bias for %s %2d %s ... at pos %d",
+                "\n CODE bias for %s %s %2d ... at pos %d",
                 bias.Sat.id().c_str(),
-                bias.cod1._to_string(),
+                enum_to_string(bias.cod1).c_str(),
                 ind,
                 bias.posInOutFile
             );
@@ -609,7 +614,7 @@ void writeBiasSinex(
                 trace,
                 "\n PHASE bias for %s %2d %s ... at pos %d",
                 bias.Sat.id().c_str(),
-                bias.cod1._to_string(),
+                enum_to_string(bias.cod1).c_str(),
                 ind,
                 bias.posInOutFile
             );
@@ -649,7 +654,7 @@ bool queryBiasOutput(
         "\n Searching %s bias for %s %s %s:  ",
         (type == CODE) ? "CODE " : "PHASE",
         Sat.id().c_str(),
-        obsCode._to_string(),
+        enum_to_string(obsCode),
         time.to_string().c_str()
     );
 

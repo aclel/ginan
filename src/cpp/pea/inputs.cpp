@@ -323,6 +323,19 @@ void reloadInputFiles()
         readSp3ToNav(sp3file, nav, 0);
     }
 
+    removeInvalidFiles(acsConfig.ems_files);
+    for (auto& emsfile : acsConfig.ems_files)
+    {
+        if (fileChanged(emsfile) == false)
+        {
+            continue;
+        }
+
+        BOOST_LOG_TRIVIAL(info) << "Loading EMS file " << emsfile;
+
+        readEMSdata(emsfile);
+    }
+
     removeInvalidFiles(acsConfig.obx_files);
     for (auto& obxfile : acsConfig.obx_files)
     {
@@ -575,8 +588,8 @@ void reloadInputFiles()
 
     if (acsConfig.output_slr_obs)
     {
-        slrObsFiles = outputSortedSlrObs(
-        );  // CRD files need to be parsed before sorted .slr_obs files are exported
+        slrObsFiles = outputSortedSlrObs();  // CRD files need to be parsed before sorted .slr_obs
+                                             // files are exported
     }
 
     removeInvalidFiles(acsConfig.com_files);  // centre-of-mass data

@@ -256,8 +256,8 @@ bool RtcmEncoder::encodeWriteMessageToBuffer(vector<uint8_t>& buffer)
 vector<uint8_t> RtcmEncoder::encodeTimeStampRTCM()
 {
     // Custom message code, for crcsi maximum length 4096 bits or 512 bytes.
-    unsigned int messCode = +RtcmMessageType::CUSTOM;
-    unsigned int messType = +E_RTCMSubmessage::TIMESTAMP;
+    unsigned int messCode = rtcmTypeToMessageNumber(RtcmMessageType::CUSTOM);
+    unsigned int messType = static_cast<unsigned int>(E_RTCMSubmessage::TIMESTAMP);
 
     GTime now = timeGet();
 
@@ -296,7 +296,7 @@ int RtcmEncoder::encodeSsrHeader(
     int MWConistInd            ///< MW Consistency Indicator (for phase bias only)
 )
 {
-    string messCodeStr = messCode._to_string();
+    string messCodeStr = enum_to_string(messCode);
     string messTypeStr = messCodeStr.substr(8);
 
     int ne = 0;
@@ -329,12 +329,12 @@ int RtcmEncoder::encodeSsrHeader(
             break;
         default:
             BOOST_LOG_TRIVIAL(error)
-                << "Unrecognised system: " << sys._to_string() << " in " << __FUNCTION__;
+                << "Unrecognised system: " << enum_to_string(sys) << " in " << __FUNCTION__;
             return 0;
     }
 
     int i = 0;
-    i     = setbituInc(buf, i, 12, messCode);
+    i     = setbituInc(buf, i, 12, rtcmTypeToMessageNumber(messCode));
     i     = setbituInc(buf, i, ne, ssrMeta.epochTime1s);
     i     = setbituInc(buf, i, 4, ssrMeta.updateIntIndex);
     i     = setbituInc(buf, i, 1, ssrMeta.multipleMessage);
@@ -366,7 +366,7 @@ vector<uint8_t> RtcmEncoder::encodeSsrOrbClk(
     RtcmMessageType messCode    ///< RTCM message code to encode ephemeris of
 )
 {
-    string messCodeStr = messCode._to_string();
+    string messCodeStr = enum_to_string(messCode);
     string messTypeStr = messCodeStr.substr(8);
 
     int numSats = ssrOutMap.size();
@@ -750,27 +750,27 @@ vector<uint8_t> RtcmEncoder::encodeSsrPhase(
             // print_map( mCodes_gps.left, " E_ObsCode <--> RTCM ", BOOST_LOG_TRIVIAL(debug) );
 
             int rtcmCode = 0;
-            if (Sat.sys == +E_Sys::GPS)
+            if (Sat.sys == E_Sys::GPS)
             {
                 rtcmCode = mCodes_gps.left.at(obsCode);
             }  // todo aaron, crash heaven, needs else, try
-            else if (Sat.sys == +E_Sys::GLO)
+            else if (Sat.sys == E_Sys::GLO)
             {
                 rtcmCode = mCodes_glo.left.at(obsCode);
             }
-            else if (Sat.sys == +E_Sys::GAL)
+            else if (Sat.sys == E_Sys::GAL)
             {
                 rtcmCode = mCodes_gal.left.at(obsCode);
             }
-            else if (Sat.sys == +E_Sys::QZS)
+            else if (Sat.sys == E_Sys::QZS)
             {
                 rtcmCode = mCodes_qzs.left.at(obsCode);
             }
-            else if (Sat.sys == +E_Sys::BDS)
+            else if (Sat.sys == E_Sys::BDS)
             {
                 rtcmCode = mCodes_bds.left.at(obsCode);
             }
-            else if (Sat.sys == +E_Sys::SBS)
+            else if (Sat.sys == E_Sys::SBS)
             {
                 rtcmCode = mCodes_sbs.left.at(obsCode);
             }
@@ -901,27 +901,27 @@ vector<uint8_t> RtcmEncoder::encodeSsrCode(
         for (auto& [obsCode, entry] : ssrCodeBias.obsCodeBiasMap)
         {
             int rtcmCode = 0;
-            if (Sat.sys == +E_Sys::GPS)
+            if (Sat.sys == E_Sys::GPS)
             {
                 rtcmCode = mCodes_gps.left.at(obsCode);
             }
-            else if (Sat.sys == +E_Sys::GLO)
+            else if (Sat.sys == E_Sys::GLO)
             {
                 rtcmCode = mCodes_glo.left.at(obsCode);
             }
-            else if (Sat.sys == +E_Sys::GAL)
+            else if (Sat.sys == E_Sys::GAL)
             {
                 rtcmCode = mCodes_gal.left.at(obsCode);
             }
-            else if (Sat.sys == +E_Sys::QZS)
+            else if (Sat.sys == E_Sys::QZS)
             {
                 rtcmCode = mCodes_qzs.left.at(obsCode);
             }
-            else if (Sat.sys == +E_Sys::BDS)
+            else if (Sat.sys == E_Sys::BDS)
             {
                 rtcmCode = mCodes_bds.left.at(obsCode);
             }
-            else if (Sat.sys == +E_Sys::SBS)
+            else if (Sat.sys == E_Sys::SBS)
             {
                 rtcmCode = mCodes_sbs.left.at(obsCode);
             }
@@ -1095,11 +1095,11 @@ vector<uint8_t> RtcmEncoder::encodeEphemeris(
     unsigned char*  buf = buffer.data();
 
     int i = 0;
-    i     = setbituInc(buf, i, 12, messCode);
+    i     = setbituInc(buf, i, 12, rtcmTypeToMessageNumber(messCode));
 
     auto Sat  = eph.Sat;
     auto type = eph.type;
-    if (Sat.sys == +E_Sys::GPS)
+    if (Sat.sys == E_Sys::GPS)
     {
         int          idot  = (int)round(eph.idot / P2_43 / SC2RAD);
         int          tocs  = (int)round(eph.tocs / 16.0);
@@ -1154,7 +1154,7 @@ vector<uint8_t> RtcmEncoder::encodeEphemeris(
         i = setbituInc(buf, i, 1, eph.flag);
         i = setbituInc(buf, i, 1, eph.fitFlag);
     }
-    else if (Sat.sys == +E_Sys::BDS)
+    else if (Sat.sys == E_Sys::BDS)
     {
         int          idot  = (int)round(eph.idot / P2_43 / SC2RAD);
         int          tocs  = (int)round(eph.tocs / 8.0);
@@ -1208,7 +1208,7 @@ vector<uint8_t> RtcmEncoder::encodeEphemeris(
         i = setbitsInc(buf, i, 10, tgd2);
         i = setbituInc(buf, i, 1, eph.svh);
     }
-    else if (Sat.sys == +E_Sys::QZS)
+    else if (Sat.sys == E_Sys::QZS)
     {
         int          tocs  = (int)round(eph.tocs / 16.0);
         int          f2    = (int)round(eph.f2 / P2_55);
@@ -1262,7 +1262,7 @@ vector<uint8_t> RtcmEncoder::encodeEphemeris(
         i = setbituInc(buf, i, 10, eph.iodc);
         i = setbituInc(buf, i, 1, eph.fitFlag);
     }
-    else if (Sat.sys == +E_Sys::GAL)
+    else if (Sat.sys == E_Sys::GAL)
     {
         int          idot  = (int)round(eph.idot / P2_43 / SC2RAD);
         int          tocs  = (int)round(eph.tocs / 60.0);
@@ -1313,13 +1313,13 @@ vector<uint8_t> RtcmEncoder::encodeEphemeris(
         i = setbitsInc(buf, i, 24, OMGd);
         i = setbitsInc(buf, i, 10, bgd1);
 
-        if (type == +E_NavMsgType::FNAV)
+        if (type == E_NavMsgType::FNAV)
         {
             i = setbituInc(buf, i, 2, eph.e5a_hs);
             i = setbituInc(buf, i, 1, eph.e5a_dvs);
             i = setbituInc(buf, i, 7, 0); /* reserved */
         }
-        else if (type == +E_NavMsgType::INAV)
+        else if (type == E_NavMsgType::INAV)
         {
             i = setbitsInc(buf, i, 10, bgd2);
             i = setbituInc(buf, i, 2, eph.e5b_hs);
@@ -1358,7 +1358,7 @@ vector<uint8_t> RtcmEncoder::encodeEphemeris(
     unsigned char*  buf = buffer.data();
 
     int i = 0;
-    i     = setbituInc(buf, i, 12, messCode);
+    i     = setbituInc(buf, i, 12, rtcmTypeToMessageNumber(messCode));
 
     auto Sat = geph.Sat;
     {

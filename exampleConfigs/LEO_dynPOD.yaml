@@ -224,7 +224,8 @@ processing_options:
     always_reinitialise: false # Reset SPP state to zero to avoid potential for lock-in of bad states
     max_lsq_iterations: 12 # Maximum number of iterations of least squares allowed for convergence
     outlier_screening:
-      raim: true # Enable Receiver Autonomous Integrity Monitoring
+      raim:
+        enable: true # Enable Receiver Autonomous Integrity Monitoring
       max_gdop: 30 # Maximum dilution of precision before error is flagged
 
   ambiguity_resolution: # Warning: lambda_bie is NOT recommended for network processing, use bootst option instead
@@ -265,7 +266,6 @@ processing_options:
     rts: # Rauch-Tung-Striebel (RTS) backwards smoothing
       enable: true
       lag: -1
-      inverter: LDLT # Inverter to be used within the rts processor, which may provide different performance outcomes in terms of processing time and accuracy and stability
       filename: <CONFIG>_<RECEIVER>.rts
 
 estimation_parameters:

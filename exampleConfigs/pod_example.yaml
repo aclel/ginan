@@ -157,12 +157,8 @@ satellite_options:
         enable: true
       code_bias:
         enable: true
-        default_bias: 0
-        undefined_sigma: 0
       phase_bias:
         enable: false
-        default_bias: 0
-        undefined_sigma: 0
 
     orbit_propagation:
       albedo: cannonball
@@ -234,12 +230,8 @@ receiver_options: # Options to configure individual stations or global configs
         enable: true # (bool) Enable modelling of phase center variations
       code_bias:
         enable: true # (bool) Enable modelling of code biases
-        default_bias: 0 # (float) Bias to use when no code bias is found
-        undefined_sigma: 0 # (float) Uncertainty sigma to apply to default code biases
       phase_bias:
         enable: false # (bool) Enable modelling of phase biases
-        default_bias: 0 # (float) Bias to use when no phase bias is found
-        undefined_sigma: 0 # (float) Uncertainty sigma to apply to default phase biases
       pos:
         enable: true # (bool) Enable modelling of position
       ionospheric_components: # Ionospheric models produce frequency-dependent effects
@@ -298,13 +290,18 @@ processing_options:
       #   code_priorities: [L1C, L2L, L2X]
 
   spp:
-    always_reinitialise: false
-    max_lsq_iterations: 12
     outlier_screening:
-      max_gdop: 30
-      postfit:
-        sigma_check: true
-
+      chi_square:
+        enable: true
+        sigma_threshold: 5
+      least_square:
+        max_iterations: 1
+        sigma_check: false
+        omega_test: true
+        meas_sigma_threshold: 5
+      raim:
+        enable: true
+        max_iterations: 2
   ppp_filter:
     ionospheric_components:
       common_ionosphere: true

@@ -94,7 +94,7 @@ void writeOrbexHeader(
     tracepdeex(0, orbexStream, " LIST_OF_REC_TYPES  ");
     for (auto& recType : acsConfig.orbex_record_types)
     {
-        tracepdeex(0, orbexStream, " %s", recType._to_string());
+        tracepdeex(0, orbexStream, " %s", enum_to_string(recType));
     }
     tracepdeex(0, orbexStream, "\n");
 
@@ -134,14 +134,14 @@ bool writePVCS(
     double   clk    = 0;                 // satellite clock or clock-rate
     double   clkStd = 0;                 // satellite clock or clock-rate std
 
-    if (recType == +E_OrbexRecord::PCS)
+    if (recType == E_OrbexRecord::PCS)
     {
         pv     = entry.pos;
         pvStd  = entry.posStd;
         clk    = entry.clk;
         clkStd = entry.clkStd;
     }
-    else if (recType == +E_OrbexRecord::VCS)
+    else if (recType == E_OrbexRecord::VCS)
     {
         pv     = entry.vel;
         pvStd  = entry.velStd;
@@ -199,9 +199,9 @@ bool writePV(
 {
     Vector3d pv = Vector3d::Zero();  // satellite position or velocity
 
-    if (recType == +E_OrbexRecord::POS)
+    if (recType == E_OrbexRecord::POS)
         pv = entry.pos;
-    else if (recType == +E_OrbexRecord::VEL)
+    else if (recType == E_OrbexRecord::VEL)
         pv = entry.vel;
     else
     {
@@ -239,9 +239,9 @@ bool writeClk(
 {
     double clk = 0;  // satellite clock or clock-rate
 
-    if (recType == +E_OrbexRecord::CLK)
+    if (recType == E_OrbexRecord::CLK)
         clk = entry.clk;
-    else if (recType == +E_OrbexRecord::CRT)
+    else if (recType == E_OrbexRecord::CRT)
         clk = entry.clkVel;
     else
     {
@@ -273,7 +273,7 @@ bool writeAtt(
     E_OrbexRecord recType       ///< Record type
 )
 {
-    if (recType != +E_OrbexRecord::ATT)
+    if (recType != E_OrbexRecord::ATT)
         return false;
     if (entry.q.norm() == 0)
         return false;

@@ -196,15 +196,16 @@ extern boost::log::trivial::severity_level acsSeverity;
         tracepdeex_(__VA_ARGS__); \
     } while (false)
 
-#define traceJson(level, ...)                                                                  \
-    do                                                                                         \
-    {                                                                                          \
-        if (level > traceLevel)                                                                \
-            continue;                                                                          \
-                                                                                               \
-        if (acsConfig.output_json_trace == false && acsConfig.mongoOpts.output_trace == false) \
-        {                                                                                      \
-            continue;                                                                          \
-        }                                                                                      \
-        traceJson_(__VA_ARGS__);                                                               \
+#define traceJson(level, ...)                                  \
+    do                                                         \
+    {                                                          \
+        if (level > traceLevel)                                \
+            continue;                                          \
+                                                               \
+        if (acsConfig.output_json_trace == false &&            \
+            acsConfig.mongoOpts.output_trace == E_Mongo::NONE) \
+        {                                                      \
+            continue;                                          \
+        }                                                      \
+        traceJson_(__VA_ARGS__);                               \
     } while (false)

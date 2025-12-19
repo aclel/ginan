@@ -105,7 +105,8 @@ void outputCost(
     bool       kfFound = true;
     for (int i = 0; i < 3; i++)
     {
-        kfFound &= kfState.getKFValue({KF::REC_POS, {}, rec.id, i}, recPosEcef(i));
+        kfFound = kfFound && (kfState.getKFValue({KF::REC_POS, {}, rec.id, i}, recPosEcef(i)) !=
+                              E_Source::NONE);
     }
 
     if (kfFound == false)

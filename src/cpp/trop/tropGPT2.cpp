@@ -370,6 +370,9 @@ double tropGPT2(
     double lon = pos.lon();
     double hgt = pos.hgt();
 
+    if (hgt < -1000 || hgt > 20000)
+        return 0;
+
     /* pressure, temperature, water vapor at station height */
     double pres = 1013.25 * pow((1 - 0.0000226 * hgt), 5.225);
     double tp   = 15 - 6.5E-3 * hgt + ZEROC;

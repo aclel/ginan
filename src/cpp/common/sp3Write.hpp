@@ -6,7 +6,6 @@
 using std::string;
 
 struct GTime;
-class E_Source;
 struct KFState;
 
 void outputSp3(

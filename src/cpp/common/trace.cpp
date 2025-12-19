@@ -184,7 +184,7 @@ void traceJson_(Trace& trace, GTime& time, vector<ArbitraryKVP> id, vector<Arbit
     {
         trace << "\n - " + json;
     }
-    if (acsConfig.mongoOpts.output_trace)
+    if (acsConfig.mongoOpts.output_trace != E_Mongo::NONE)
     {
         mongoTrace({json}, acsConfig.mongoOpts.queue_outputs);
     }

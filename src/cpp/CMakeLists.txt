@@ -71,6 +71,7 @@ add_executable(pea
 		common/ephKalman.cpp
 		common/ephPrecise.cpp
 		common/ephSSR.cpp
+		common/ephSBAS.cpp
 		common/erp.cpp
 		common/fileLog.cpp
 		common/fileLog.hpp
@@ -79,13 +80,9 @@ add_executable(pea
 		common/gTime.cpp
 		common/ionModels.cpp
 		common/linearCombo.cpp
-		common/mongo.cpp
-		common/mongoRead.cpp
-		common/mongoWrite.cpp
 
 		common/ntripTrace.cpp
 		common/orbits.cpp
-		common/receiver.cpp
 		common/receiver.cpp
 		common/rinex.cpp
 		common/rtsSmoothing.cpp
@@ -101,7 +98,6 @@ add_executable(pea
 		common/sp3Write.cpp
 		common/orbex.cpp
 		common/orbexWrite.cpp
-		common/tcpSocket.cpp
 		common/tcpSocket.cpp
 		common/trace.cpp
 		common/testUtils.cpp
@@ -168,6 +164,8 @@ add_executable(pea
 
 		sbas/sisnet.cpp
 		sbas/sbas.cpp
+		sbas/decodeL1.cpp
+		sbas/decodeL5.cpp
 )
 
 add_dependencies(pea updateGit)
@@ -175,21 +173,12 @@ add_dependencies(pea updateGit)
 target_include_directories(pea PUBLIC
 		configurator
 		../Architecture/
-        ${CMAKE_CURRENT_SOURCE_DIR}
+		${CMAKE_CURRENT_SOURCE_DIR}
 		${EIGEN3_INCLUDE_DIRS}
-		${LAPACK_INCLUDE_DIRS}
-		${OPENBLAS_INCLUDE_DIRS}
 		${YAML_INCLUDE_DIRS}
 		${Boost_INCLUDE_DIRS}
-		${LIBMONGOCXX_INCLUDE_DIR}
-		${LIBBSONCXX_INCLUDE_DIR}
-		${OPENSSL_INCLUDE_DIR}
-		"/usr/local/include/mongocxx/v_noabi"
-		"/usr/local/include/bsoncxx/v_noabi"
-		"/usr/local/include/libmongoc-1.0"
-		"/usr/local/include/libbson-1.0"
-		"/usr/local/lib"
-		)
+		${BLAS_INCLUDE_DIRS}
+	)
 
 target_compile_options(pea PRIVATE -fpie)
 
@@ -200,6 +189,15 @@ endif()
 target_compile_definitions(pea PRIVATE
 							EIGEN_USE_BLAS=1
 						)
+
+if(ENABLE_MONGODB)
+	target_compile_definitions(pea PRIVATE ENABLE_MONGODB=1)
+	target_sources(pea PRIVATE
+		common/mongo.cpp
+		common/mongoRead.cpp
+		common/mongoWrite.cpp
+	)
+endif()
 
 
 #==================================================
@@ -285,20 +283,41 @@ endif()
 
 
 target_link_libraries(pea PUBLIC
-						m
-						pthread
 						sofa_lib
 						${Boost_LIBRARIES}
 						${BLAS_LIBRARIES}
 						${LAPACK_LIBRARIES}
 						${YAML_CPP_LIBRARIES}
 						${YAML_CPP_LIB}
-						mongo::mongocxx_shared
-						${BLAS_LIBRARY_DIRS}
-						${OPENSSL_LIBRARIES}
-						dl
-					)
-target_include_directories(pea PRIVATE ${BLAS_INCLUDE_DIRS})
+						OpenSSL::SSL
+						OpenSSL::Crypto
+				)
+
+# Platform-specific libraries
+if(UNIX)
+	target_link_libraries(pea PUBLIC m pthread dl)
+elseif(WIN32)
+	target_link_libraries(pea PUBLIC ws2_32 wsock32)
+endif()
+
+if(ENABLE_MONGODB)
+	# Prefer static linking, fall back to shared if static not available
+	if(TARGET mongo::mongocxx_static)
+		target_link_libraries(pea PUBLIC mongo::mongocxx_static)
+		message(STATUS "Linking MongoDB statically")
+	elseif(TARGET mongo::mongocxx_shared)
+		target_link_libraries(pea PUBLIC mongo::mongocxx_shared)
+		message(STATUS "Linking MongoDB dynamically")
+	else()
+		message(WARNING "MongoDB targets not found")
+	endif()
+endif()
+
+# Add gfortran if it exists (needed for some BLAS/LAPACK implementations)
+find_library(GFORTRAN_LIB gfortran)
+if(GFORTRAN_LIB)
+	target_link_libraries(pea PUBLIC ${GFORTRAN_LIB})
+endif()
 
 set_property(TARGET pea PROPERTY POSITION_INDEPENDENT_CODE FALSE)
 

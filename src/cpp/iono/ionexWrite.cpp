@@ -266,9 +266,9 @@ void writeIonexEpoch(Trace& trace, Trace& ionex, GTime time, KFState& kfState)
 
 void ionexFileWrite(Trace& trace, string filename, GTime time, KFState& kfState)
 {
-    if (acsConfig.ionModelOpts.model == +E_IonoModel::NONE)
+    if (acsConfig.ionModelOpts.model == E_IonoModel::NONE)
         return;
-    if (acsConfig.ionModelOpts.model == +E_IonoModel::MEAS_OUT)
+    if (acsConfig.ionModelOpts.model == E_IonoModel::MEAS_OUT)
         return;
     if (acsConfig.ionModelOpts.layer_heights.size() < 1)
         return;

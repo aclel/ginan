@@ -29,9 +29,6 @@
 #include "pea/inputsOutputs.hpp"
 
 using boost::algorithm::to_lower;
-using bsoncxx::builder::stream::close_array;
-using bsoncxx::builder::stream::document;
-using bsoncxx::builder::stream::open_array;
 using std::deque;
 using std::map;
 
@@ -62,7 +59,7 @@ void OrbitIntegrator::computeCommon(GTime time)
     eci2ecf  = frameSwapper.i2t_mat;
     deci2ecf = frameSwapper.di2t_mat;  // todo aaron, just fs this instead of matrices?
 
-    for (auto& body : E_ThirdBody::_values())
+    for (auto body : enum_values<E_ThirdBody>())
     {
         jplEphPos(nav.jplEph_ptr, time, body, planetsPosMap[body], &planetsVelMap[body]);
     }
@@ -209,7 +206,7 @@ void OrbitIntegrator::computeAcceleration(
 
         for (auto& planet : orbInit.planetary_perturbations)
         {
-            if (planet == +E_ThirdBody::EARTH)
+            if (planet == E_ThirdBody::EARTH)
             {
                 continue;
             }
@@ -399,14 +396,14 @@ void OrbitIntegrator::computeAcceleration(
             break;
     }
 
-    if (orbInit.albedo != +E_SRPModel::NONE)
+    if (orbInit.albedo != E_SRPModel::NONE)
     {
         double   A     = orbInit.area;
         double   m     = orbInit.mass;
         double   E     = 1367;
         double   cBall = 0.8 * E / CLIGHT;
         double   alpha = 0.3;
-        double   Ae    = M_PI * SQR(RE_WGS84);
+        double   Ae    = PI * SQR(RE_WGS84);
         Vector3d rSun  = planetsPosMap[E_ThirdBody::SUN];
 
         double factor = Ae / rSat.squaredNorm();
@@ -650,10 +647,10 @@ void OrbitIntegrator::computeAcceleration(
                 ecl = eclipseFrac;
             }
 
-            dAdParam.col(paramIndex) = axis[empdata.axisId] * ecl;
-            if (empdata.type == +E_TrigType::COS)
+            dAdParam.col(paramIndex) = axis[static_cast<int>(empdata.axisId)] * ecl;
+            if (empdata.type == E_TrigType::COS)
                 dAdParam.col(paramIndex) *= cos(empdata.deg * du);
-            else if (empdata.type == +E_TrigType::SIN)
+            else if (empdata.type == E_TrigType::SIN)
                 dAdParam.col(paramIndex) *= sin(empdata.deg * du);
 
             accEmp += empdata.value * dAdParam.col(paramIndex);
@@ -781,7 +778,7 @@ void integrateOrbits(
         {
             tracepdeex(0, satTrace, "\n");
             tracepdeex(4, satTrace, "%s", orbitPropagator.timeInit.to_string().c_str());
-            tracepdeex(0, satTrace, " %-25s %+14.4e", component._to_string(), value);
+            tracepdeex(0, satTrace, " %-25s %+14.4e", enum_to_string(component), value);
         }
     }
 }
@@ -1103,72 +1100,62 @@ Orbits prepareOrbits(Trace& trace, const KFState& kfState)
 
                 case KF::EMP_P_0:
                 {
-                    orbit.empInput.push_back(
-                        {false, 0, E_EmpAxis::P, trigType, stateValue, subKey}
+                    orbit.empInput.push_back({false, 0, E_EmpAxis::P, trigType, stateValue, subKey}
                     );
                     break;
                 }
                 case KF::EMP_P_1:
                 {
-                    orbit.empInput.push_back(
-                        {false, 1, E_EmpAxis::P, trigType, stateValue, subKey}
+                    orbit.empInput.push_back({false, 1, E_EmpAxis::P, trigType, stateValue, subKey}
                     );
                     break;
                 }
                 case KF::EMP_P_2:
                 {
-                    orbit.empInput.push_back(
-                        {false, 2, E_EmpAxis::P, trigType, stateValue, subKey}
+                    orbit.empInput.push_back({false, 2, E_EmpAxis::P, trigType, stateValue, subKey}
                     );
                     break;
                 }
                 case KF::EMP_P_3:
                 {
-                    orbit.empInput.push_back(
-                        {false, 3, E_EmpAxis::P, trigType, stateValue, subKey}
+                    orbit.empInput.push_back({false, 3, E_EmpAxis::P, trigType, stateValue, subKey}
                     );
                     break;
                 }
                 case KF::EMP_P_4:
                 {
-                    orbit.empInput.push_back(
-                        {false, 4, E_EmpAxis::P, trigType, stateValue, subKey}
+                    orbit.empInput.push_back({false, 4, E_EmpAxis::P, trigType, stateValue, subKey}
                     );
                     break;
                 }
 
                 case KF::EMP_Q_0:
                 {
-                    orbit.empInput.push_back(
-                        {false, 0, E_EmpAxis::Q, trigType, stateValue, subKey}
+                    orbit.empInput.push_back({false, 0, E_EmpAxis::Q, trigType, stateValue, subKey}
                     );
                     break;
                 }
                 case KF::EMP_Q_1:
                 {
-                    orbit.empInput.push_back(
-                        {false, 1, E_EmpAxis::Q, trigType, stateValue, subKey}
+                    orbit.empInput.push_back({false, 1, E_EmpAxis::Q, trigType, stateValue, subKey}
                     );
                     break;
                 }
                 case KF::EMP_Q_2:
                 {
-                    orbit.empInput.push_back(
-                        {false, 2, E_EmpAxis::Q, trigType, stateValue, subKey}
+                    orbit.empInput.push_back({false, 2, E_EmpAxis::Q, trigType, stateValue, subKey}
                     );
                     break;
                 }
                 case KF::EMP_Q_3:
                 {
-                    orbit.empInput.push_back(
-                        {false, 3, E_EmpAxis::Q, trigType, stateValue, subKey}
+                    orbit.empInput.push_back({false, 3, E_EmpAxis::Q, trigType, stateValue, subKey}
                     );
                     break;
                 }
                 case KF::EMP_Q_4:
                 {
-                    orbit.empInput.push_back(
-                        {false, 4, E_EmpAxis::Q, trigType, stateValue, subKey}
+                    orbit.empInput.push_back({false, 4, E_EmpAxis::Q, trigType, stateValue, subKey}
                     );
                     break;
                 }
@@ -1421,7 +1408,7 @@ void addEmpStates(const EmpKalmans& satOpts, KFState& kfState, const string& id)
 
 void outputOrbitConfig(KFState& kfState, bool isSmoothed)
 {
-    document satellites;
+    boost::json::object satellites;
 
     for (auto& [key, index] : kfState.kfIndexMap)
     {
@@ -1430,7 +1417,7 @@ void outputOrbitConfig(KFState& kfState, bool isSmoothed)
             continue;
         }
 
-        document satellite;
+        boost::json::object satellite;
 
         for (KF type : {
                  KF::ORBIT,
@@ -1445,7 +1432,7 @@ void outputOrbitConfig(KFState& kfState, bool isSmoothed)
              })
         {
             int n = 2;
-            if (type == +KF::ORBIT)
+            if (type == KF::ORBIT)
                 n = 6;
 
             vector<double> aprioriVec(n);
@@ -1459,9 +1446,10 @@ void outputOrbitConfig(KFState& kfState, bool isSmoothed)
                 kfKey.type  = type;
                 kfKey.num   = i;
 
-                double val   = 0;
-                double var   = 0;
-                bool   found = kfState.getKFValue(kfKey, val, &var);
+                double   val      = 0;
+                double   var      = 0;
+                E_Source foundSrc = kfState.getKFValue(kfKey, val, &var);
+                bool     found    = foundSrc != E_Source::NONE;
 
                 aprioriVec[i]   = val;
                 sigmaVec[i]     = sqrt(var);
@@ -1474,47 +1462,43 @@ void outputOrbitConfig(KFState& kfState, bool isSmoothed)
                 continue;
             }
 
-            document state;
+            boost::json::object state;
+            boost::json::array  apriori_arr;
+            for (auto& val : aprioriVec)
+                apriori_arr.push_back(val);
+            state["apriori_val"] = apriori_arr;
 
-            {
-                auto arr = state << "apriori_val" << open_array;
-                for (auto& val : aprioriVec)
-                    arr << val;
-                arr << close_array;
-            }
-            {
-                auto arr = state << "sigma" << open_array;
-                for (auto& val : sigmaVec)
-                    arr << val;
-                arr << close_array;
-            }
-            {
-                auto arr = state << "estimated" << open_array;
-                for (auto& val : estimatedVec)
-                    arr << val;
-                arr << close_array;
-            }
+            boost::json::array sigma_arr;
+            for (auto& val : sigmaVec)
+                sigma_arr.push_back(val);
+            state["sigma"] = sigma_arr;
 
-            string typeStr = type._to_string();
+            boost::json::array estimated_arr;
+            for (auto& val : estimatedVec)
+                estimated_arr.push_back(val);
+            state["estimated"] = estimated_arr;
+
+            string typeStr = enum_to_string(type);
             to_lower(typeStr);
 
-            satellite << typeStr << state;
+            satellite[typeStr] = state;
         }
 
-        satellites << key.Sat.id() << satellite;
+        satellites[key.Sat.id()] = satellite;
     }
 
-    document epoch_control;
-    epoch_control << "start_epoch" << kfState.time.to_string();
-    document processing_options;
-    processing_options << "epoch_control" << epoch_control;
+    boost::json::object epoch_control;
+    epoch_control["start_epoch"] = kfState.time.to_string();
 
-    document estimation_parameters;
-    estimation_parameters << "satellites" << satellites;
+    boost::json::object processing_options;
+    processing_options["epoch_control"] = epoch_control;
 
-    document json;
-    json << "processing_options" << processing_options;
-    json << "estimation_parameters" << estimation_parameters;
+    boost::json::object estimation_parameters;
+    estimation_parameters["satellites"] = satellites;
+
+    boost::json::object json;
+    json["processing_options"]    = processing_options;
+    json["estimation_parameters"] = estimation_parameters;
 
     string filename = acsConfig.orbit_ics_filename;
 
@@ -1541,5 +1525,5 @@ void outputOrbitConfig(KFState& kfState, bool isSmoothed)
         return;
     }
 
-    output << bsoncxx::to_json(json) << "\n";
+    output << boost::json::serialize(json) << "\n";
 }

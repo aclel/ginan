@@ -3,6 +3,7 @@
 #include <boost/algorithm/string/trim.hpp>
 #include <boost/asio.hpp>
 #include <boost/asio/buffer.hpp>
+#include <boost/asio/deadline_timer.hpp>
 #include <boost/asio/ssl.hpp>
 #include <boost/date_time/posix_time/posix_time.hpp>
 #include <boost/format.hpp>

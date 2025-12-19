@@ -152,7 +152,7 @@ void decodeObsH(
 
         SatSys Sat(code);
 
-        if (Sat.sys == +E_Sys::NONE)
+        if (Sat.sys == E_Sys::NONE)
         {
             BOOST_LOG_TRIVIAL(debug) << "invalid system code: sys=" << code[0];
 
@@ -185,7 +185,7 @@ void decodeObsH(
             obsCode3str[2]     = buff[k + 2];
 
             // Handle BeiDou B1 code special case for version 3.02
-            if ((Sat.sys == +E_Sys::BDS) && (obsCode3str[1] == '1') && (ver == 3.02))
+            if ((Sat.sys == E_Sys::BDS) && (obsCode3str[1] == '1') && (ver == 3.02))
             {
                 // change beidou B1 code: 3.02 draft -> 3.02
                 obsCode3str[1] = '2';
@@ -194,14 +194,14 @@ void decodeObsH(
             try
             {
                 // For RINEX 3, directly store the 3-character code in the code field
-                codeType.code = E_ObsCode::_from_string(obsCode3str);
+                codeType.code = string_to_enum<E_ObsCode>(obsCode3str);
 
                 // Leave code2 as NONE for RINEX 3 since we have the full 3-character code
                 codeType.code2 = E_ObsCode2::NONE;
 
                 BOOST_LOG_TRIVIAL(debug)
-                    << "RINEX3 stored code: " << obsCode3str << " -> " << codeType.code._to_string()
-                    << " for system " << Sat.sys._to_string();
+                    << "RINEX3 stored code: " << obsCode3str << " -> "
+                    << enum_to_string(codeType.code) << " for system " << enum_to_string(Sat.sys);
             }
             catch (...)
             {
@@ -274,7 +274,7 @@ void decodeObsH(
                 BOOST_LOG_TRIVIAL(debug) << "RINEX2 processing obs type: " << obsCode2str;
 
                 // Process for all satellite systems since RINEX 2 doesn't specify per-system
-                for (E_Sys sys : E_Sys::_values())
+                for (E_Sys sys : enum_values<E_Sys>())
                 {
                     auto& recOpts = acsConfig.getRecOpts(rnxRec.id, {SatSys(sys, 0).sysName()});
 
@@ -284,13 +284,13 @@ void decodeObsH(
                     {
                         // For RINEX 2, primarily use code2 to store the original 2-character codes
                         BOOST_LOG_TRIVIAL(debug) << "RINEX2 converting code: " << obsCode2str
-                                                 << " for system " << sys._to_string();
-                        E_ObsCode2 obsCode2 = E_ObsCode2::_from_string(obsCode2str);
+                                                 << " for system " << enum_to_string(sys);
+                        E_ObsCode2 obsCode2 = string_to_enum<E_ObsCode2>(obsCode2str);
                         codeType.code2      = obsCode2;
 
                         BOOST_LOG_TRIVIAL(debug)
                             << "RINEX2 stored code2: " << obsCode2str << " -> "
-                            << obsCode2._to_string() << " for system " << sys._to_string();
+                            << enum_to_string(obsCode2) << " for system " << enum_to_string(sys);
 
                         // Keep code as NONE for RINEX 2 - let downstream processing handle
                         // conversion if needed
@@ -299,7 +299,7 @@ void decodeObsH(
                     catch (...)
                     {
                         BOOST_LOG_TRIVIAL(warning)
-                            << "Warning:" << rnxRec.id << " Unknown RINEX2 code: " << obsCode2str;
+                            << rnxRec.id << " Unknown RINEX2 code: " << obsCode2str;
 
                         codeType.code2 = E_ObsCode2::NONE;
                         codeType.code  = E_ObsCode::NONE;
@@ -451,7 +451,7 @@ void decodeNavH(
         // opt ver.3
         char sysStr[4] = "";
         strncpy(sysStr, buff, 3);
-        sys               = E_Sys::_from_string(sysStr);
+        sys               = string_to_enum<E_Sys>(sysStr);
         E_NavMsgType type = defNavMsgType[sys];
         GTime        time = {};
 
@@ -478,13 +478,13 @@ void decodeNavH(
         // opt ver.3
         char codeStr[5] = "";
         strncpy(codeStr, buff, 4);
-        E_StoCode code = E_StoCode::_from_string(codeStr);
+        E_StoCode code = string_to_enum<E_StoCode>(codeStr);
 
         char id[8] = "";
         strncpy(id, buff + 51, 5);
         SatSys Sat = SatSys(id);
 
-        if (Sat.sys == +E_Sys::NONE)
+        if (Sat.sys == E_Sys::NONE)
         {
             switch (code)
             {
@@ -521,7 +521,7 @@ void decodeNavH(
         double sec  = str2num(buff, 38, 7);
         double week = str2num(buff, 45, 5);
         GTime  time = {};
-        if (Sat.sys != +E_Sys::BDS)
+        if (Sat.sys != E_Sys::BDS)
         {
             time = GTime(GWeek(week), GTow(sec));
         }
@@ -705,8 +705,8 @@ int readRnxH(
 
                         char code = r3[0];
                         r3[0]     = 'L';
-                        auto obs2 = E_ObsCode2 ::_from_string_nocase(r2);
-                        auto obs3 = E_ObsCode ::_from_string_nocase(r3);
+                        auto obs2 = string_to_enum_nocase<E_ObsCode2>(r2);
+                        auto obs3 = string_to_enum_nocase<E_ObsCode>(r3);
 
                         auto& recOpts = acsConfig.getRecOpts(rnxRec.id, {SatSys(sys, 0).sysName()});
 
@@ -898,17 +898,17 @@ int decodeObsDataRinex2(
         return 0;
 
     // Defensive check for valid satellite system before accessing sysCodeTypes
-    if (obs.Sat.sys == +E_Sys::NONE || obs.Sat.sys._value < 0)
+    if (obs.Sat.sys == E_Sys::NONE || static_cast<int>(obs.Sat.sys) < 0)
     {
         BOOST_LOG_TRIVIAL(error) << "RINEX2: Invalid satellite system: "
-                                 << obs.Sat.sys._to_string();
+                                 << enum_to_string(obs.Sat.sys);
         return 0;
     }
 
     // Check if the system exists in sysCodeTypes map
     if (sysCodeTypes.find(obs.Sat.sys) == sysCodeTypes.end())
     {
-        BOOST_LOG_TRIVIAL(error) << "RINEX2: System " << obs.Sat.sys._to_string()
+        BOOST_LOG_TRIVIAL(error) << "RINEX2: System " << enum_to_string(obs.Sat.sys)
                                  << " not found in sysCodeTypes";
         return 0;
     }
@@ -987,12 +987,12 @@ int decodeObsDataRinex2(
             if (it != codeMap.end())
             {
                 effectiveCode = it->second;
-                BOOST_LOG_TRIVIAL(debug) << "RINEX2: Found code2 " << codeType.code2._to_string()
-                                         << " in codeMap -> " << effectiveCode._to_string();
+                BOOST_LOG_TRIVIAL(debug) << "RINEX2: Found code2 " << enum_to_string(codeType.code2)
+                                         << " in codeMap -> " << enum_to_string(effectiveCode);
             }
             else
             {
-                BOOST_LOG_TRIVIAL(warning) << "RINEX2: code2 " << codeType.code2._to_string()
+                BOOST_LOG_TRIVIAL(warning) << "RINEX2: code2 " << enum_to_string(codeType.code2)
                                            << " not found in codeMap for type " << codeType.type
                                            << ", sat=" << obs.Sat.id();
             }
@@ -1007,21 +1007,21 @@ int decodeObsDataRinex2(
                 effectiveCode      = priorityCodes[0];  // Temporary for frequency lookup
                 isPhaseObservation = true;
                 BOOST_LOG_TRIVIAL(debug) << "RINEX2: Found phase priorities for "
-                                         << codeType.code2._to_string() << " -> [" << [&]()
+                                         << enum_to_string(codeType.code2) << " -> [" << [&]()
                 {
                     string codes;
                     for (size_t i = 0; i < priorityCodes.size(); ++i)
                     {
                         if (i > 0)
                             codes += ",";
-                        codes += priorityCodes[i]._to_string();
+                        codes += enum_to_string(priorityCodes[i]);
                     }
                     return codes;
                 }() << "]";
             }
             else
             {
-                BOOST_LOG_TRIVIAL(warning) << "RINEX2: code2 " << codeType.code2._to_string()
+                BOOST_LOG_TRIVIAL(warning) << "RINEX2: code2 " << enum_to_string(codeType.code2)
                                            << " not found in phasMap for type " << codeType.type
                                            << ", sat=" << obs.Sat.id();
             }
@@ -1079,7 +1079,7 @@ int decodeObsDataRinex2(
         for (const auto& sig : sigsList)
         {
             BOOST_LOG_TRIVIAL(debug)
-                << "  " << sig.code._to_string() << ": L=" << std::setprecision(16) << sig.L
+                << "  " << enum_to_string(sig.code) << ": L=" << std::setprecision(16) << sig.L
                 << ", P=" << std::setprecision(16) << sig.P
                 << ", LLI=" << static_cast<int>(sig.LLI);
         }
@@ -1215,10 +1215,40 @@ int readRnxObsB(
             GObs rawObs = {};
 
             rawObs.time = time;
-
+            bool pass   = false;
             // decode obs data
-            bool pass =
-                decodeObsData(inputStream, line, ver, sysCodeTypes, rawObs, sats[i - 1], rnxRec);
+            if (ver <= 2.99)
+            {
+                // RINEX 2: Pass satellite from epoch header
+                SatSys v2SatSys = sats[i - 1];
+                bool   pass =
+                    decodeObsData(inputStream, line, ver, sysCodeTypes, rawObs, v2SatSys, rnxRec);
+                if (pass)
+                {
+                    // save obs data
+                    obsList.push_back((shared_ptr<GObs>)rawObs);
+                }
+            }
+            else
+            {
+                // RINEX 3: Satellite ID is in observation line
+                SatSys dummySatSys;  // Not used in RINEX 3
+                bool   pass = decodeObsData(
+                    inputStream,
+                    line,
+                    ver,
+                    sysCodeTypes,
+                    rawObs,
+                    dummySatSys,
+                    rnxRec
+                );
+                if (pass)
+                {
+                    // save obs data
+                    obsList.push_back((shared_ptr<GObs>)rawObs);
+                }
+            }
+
             if (pass)
             {
                 // save obs data
@@ -1264,12 +1294,19 @@ int decodeEph(double ver, SatSys Sat, GTime toc, vector<double>& data, Eph& eph)
 {
     // 	BOOST_LOG_TRIVIAL(debug) << __FUNCTION__ << ": ver=" << ver << " sat=" << Sat.id();
 
-    int sys = Sat.sys;
+    E_Sys sys = Sat.sys;
 
-    if (sys != +E_Sys::GPS && sys != +E_Sys::GAL && sys != +E_Sys::QZS && sys != +E_Sys::BDS)
+    if (sys != E_Sys::GPS && sys != E_Sys::GAL && sys != E_Sys::QZS && sys != E_Sys::BDS)
     {
         BOOST_LOG_TRIVIAL(debug) << "ephemeris error: invalid satellite sat=" << Sat.id();
 
+        return 0;
+    }
+
+    double deltaTime = (toc - toc.floorTime(7200)).to_double();
+    if (sys == E_Sys::GPS && deltaTime > 60 && deltaTime < (7200 - 60))
+    {
+        // Skip decoding bad ephemeris (being off for more than 1 minute from 2-hour modulo epochs)
         return 0;
     }
 
@@ -1300,7 +1337,7 @@ int decodeEph(double ver, SatSys Sat, GTime toc, vector<double>& data, Eph& eph)
     eph.week  = (int)data[21];  // gps/bdt week
     eph.ttms  = data[27];
 
-    if (sys == +E_Sys::GPS || sys == +E_Sys::QZS)
+    if (sys == E_Sys::GPS || sys == E_Sys::QZS)
     {
         eph.iode = (int)data[3];   // IODE
         eph.iodc = (int)data[26];  // IODC
@@ -1315,11 +1352,11 @@ int decodeEph(double ver, SatSys Sat, GTime toc, vector<double>& data, Eph& eph)
 
         eph.tgd[0] = data[25];            // TGD
 
-        if (sys == +E_Sys::GPS)
+        if (sys == E_Sys::GPS)
         {
             eph.fit = data[28];
         }  // fit interval in hours for GPS
-        else if (sys == +E_Sys::QZS)
+        else if (sys == E_Sys::QZS)
         {
             eph.fitFlag = data[28];
             eph.fit     = eph.fitFlag ? 0.0 : 2.0;
@@ -1328,7 +1365,7 @@ int decodeEph(double ver, SatSys Sat, GTime toc, vector<double>& data, Eph& eph)
         if (acsConfig.use_tgd_bias)
             decomposeTGDBias(Sat, eph.tgd[0]);
     }
-    else if (sys == +E_Sys::GAL)
+    else if (sys == E_Sys::GAL)
     {
         // GAL ver.3
         eph.iode = (int)data[3];  // IODnav
@@ -1364,7 +1401,7 @@ int decodeEph(double ver, SatSys Sat, GTime toc, vector<double>& data, Eph& eph)
         if (acsConfig.use_tgd_bias)
             decomposeBGDBias(Sat, eph.tgd[0], eph.tgd[1]);
     }
-    else if (sys == +E_Sys::BDS)
+    else if (sys == E_Sys::BDS)
     {
         // BeiDou v.3.02
         if (Sat.prn > 5 && Sat.prn < 59)
@@ -1414,7 +1451,7 @@ int decodeGeph(
     //     BOOST_LOG_TRIVIAL(debug)
     // 	<< "decodeGeph: ver=" << ver << " sat=" << Sat.id();
 
-    if (Sat.sys != +E_Sys::GLO)
+    if (Sat.sys != E_Sys::GLO)
     {
         BOOST_LOG_TRIVIAL(debug) << "glonass ephemeris error: invalid satellite sat=" << Sat.id();
 
@@ -1468,7 +1505,7 @@ int decodeSeph(double ver, SatSys Sat, GTime toc, vector<double>& data, Seph& se
     //     BOOST_LOG_TRIVIAL(debug)
     // 	<< "decodeSeph: ver=" << ver << " sat=" << Sat.id();
 
-    if (Sat.sys != +E_Sys::SBS)
+    if (Sat.sys != E_Sys::SBS)
     {
         BOOST_LOG_TRIVIAL(debug) << "geo ephemeris error: invalid satellite sat=" << Sat.id();
 
@@ -1518,17 +1555,18 @@ int decodeCeph(
         return -1;
     }
 
-    if (type != +E_NavMsgType::CNAV && type != +E_NavMsgType::CNV1 && type != +E_NavMsgType::CNV2 &&
-        type != +E_NavMsgType::CNV3)
+    if (type != E_NavMsgType::CNAV && type != E_NavMsgType::CNV1 && type != E_NavMsgType::CNV2 &&
+        type != E_NavMsgType::CNV3)
     {
-        BOOST_LOG_TRIVIAL(debug) << "ephemeris error: invalid message type=" << type._to_string();
+        BOOST_LOG_TRIVIAL(debug) << "ephemeris error: invalid message type="
+                                 << enum_to_string(type);
 
         return 0;
     }
 
-    int sys = Sat.sys;
+    E_Sys sys = Sat.sys;
 
-    if (sys != +E_Sys::GPS && sys != +E_Sys::QZS && sys != +E_Sys::BDS)
+    if (sys != E_Sys::GPS && sys != E_Sys::QZS && sys != E_Sys::BDS)
     {
         BOOST_LOG_TRIVIAL(debug) << "ephemeris error: invalid satellite sat=" << Sat.id();
 
@@ -1560,7 +1598,7 @@ int decodeCeph(
     ceph.idot = data[19];
     ceph.dn0d = data[20];
 
-    if (sys == +E_Sys::GPS || sys == +E_Sys::QZS)
+    if (sys == E_Sys::GPS || sys == E_Sys::QZS)
     {
         ceph.toe  = ceph.toc;
         ceph.toes = GTow(ceph.toe);
@@ -1579,13 +1617,13 @@ int decodeCeph(
         ceph.isc[2] = data[29];
         ceph.isc[3] = data[30];
 
-        if (type == +E_NavMsgType::CNAV)
+        if (type == E_NavMsgType::CNAV)
         {
             ceph.ttms = data[31];
             ceph.ttm  = GTime(GTow(ceph.ttms), ceph.toc);
             ceph.wnop = (int)data[32];
         }
-        else if (type == +E_NavMsgType::CNV2)
+        else if (type == E_NavMsgType::CNV2)
         {
             ceph.isc[4] = data[31];
             ceph.isc[5] = data[32];
@@ -1598,18 +1636,18 @@ int decodeCeph(
         ceph.tops = data[11];  // top (s) in seconds
         ceph.top  = GTime(GTow(ceph.tops), ceph.toc);
     }
-    else if (sys == +E_Sys::BDS)
+    else if (sys == E_Sys::BDS)
     {
         // BeiDou v.4.00
 
-        ceph.orb = E_SatType::_from_integral(data[21]);
+        ceph.orb = int_to_enum<E_SatType>(data[21]);
 
         ceph.sis[0] = data[23];
         ceph.sis[1] = data[24];
         ceph.sis[2] = data[25];
         ceph.sis[3] = data[26];
 
-        if (type == +E_NavMsgType::CNV1 || type == +E_NavMsgType::CNV2)
+        if (type == E_NavMsgType::CNV1 || type == E_NavMsgType::CNV2)
         {
             ceph.isc[0] = data[27];
             ceph.isc[1] = data[28];
@@ -1627,7 +1665,7 @@ int decodeCeph(
             ceph.ttms = data[35];
             ceph.ttm  = GTime(BTow(ceph.ttms), ceph.toc);
         }
-        else if (type == +E_NavMsgType::CNV3)
+        else if (type == E_NavMsgType::CNV3)
         {
             ceph.sis[4] = data[27];
             ceph.svh    = (E_Svh)data[28];  // sv health
@@ -1667,15 +1705,15 @@ int decodeSto(double ver, SatSys Sat, E_NavMsgType type, GTime toc, vector<doubl
         return -1;
     }
 
-    int sys = Sat.sys;
+    E_Sys sys = Sat.sys;
 
     sto.Sat  = Sat;
     sto.type = type;
     sto.tot  = toc;
 
-    sto.code = E_StoCode ::_from_integral(data[0]);
-    sto.sid  = E_SbasId ::_from_integral(data[1]);
-    sto.uid  = E_UtcId ::_from_integral(data[2]);
+    sto.code = int_to_enum<E_StoCode>(data[0]);
+    sto.sid  = int_to_enum<E_SbasId>(data[1]);
+    sto.uid  = int_to_enum<E_UtcId>(data[2]);
 
     sto.ttms = data[3];
 
@@ -1683,7 +1721,7 @@ int decodeSto(double ver, SatSys Sat, E_NavMsgType type, GTime toc, vector<doubl
     sto.A1 = data[5];
     sto.A2 = data[6];
 
-    if (sys != +E_Sys::BDS)
+    if (sys != E_Sys::BDS)
     {
         sto.ttm = GTime(GWeek(sto.tot), GTow(sto.ttms));
     }
@@ -1705,7 +1743,7 @@ int decodeEop(double ver, SatSys Sat, E_NavMsgType type, GTime toc, vector<doubl
         return -1;
     }
 
-    int sys = Sat.sys;
+    E_Sys sys = Sat.sys;
 
     eop.Sat  = Sat;
     eop.type = type;
@@ -1722,7 +1760,7 @@ int decodeEop(double ver, SatSys Sat, E_NavMsgType type, GTime toc, vector<doubl
     eop.dur  = data[9];
     eop.durr = data[10];
 
-    if (sys != +E_Sys::BDS)
+    if (sys != E_Sys::BDS)
     {
         eop.ttm = GTime(GWeek(eop.teop), GTow(eop.ttms));
     }
@@ -1744,13 +1782,13 @@ int decodeIon(double ver, SatSys Sat, E_NavMsgType type, GTime toc, vector<doubl
         return -1;
     }
 
-    int sys = Sat.sys;
+    E_Sys sys = Sat.sys;
 
     ion.Sat  = Sat;
     ion.type = type;
     ion.ttm  = toc;
 
-    if (sys == +E_Sys::GAL && type == +E_NavMsgType::IFNV)
+    if (sys == E_Sys::GAL && type == E_NavMsgType::IFNV)
     {
         ion.ai0 = data[0];
         ion.ai1 = data[1];
@@ -1758,7 +1796,7 @@ int decodeIon(double ver, SatSys Sat, E_NavMsgType type, GTime toc, vector<doubl
 
         ion.flag = (int)data[3];
     }
-    else if (sys == +E_Sys::BDS && type == +E_NavMsgType::CNVX)
+    else if (sys == E_Sys::BDS && type == E_NavMsgType::CNVX)
     {
         ion.alpha1 = data[0];
         ion.alpha2 = data[1];
@@ -1770,8 +1808,7 @@ int decodeIon(double ver, SatSys Sat, E_NavMsgType type, GTime toc, vector<doubl
         ion.alpha8 = data[7];
         ion.alpha9 = data[8];
     }
-    else if (type == +E_NavMsgType::LNAV || type == +E_NavMsgType::D1D2 ||
-             type == +E_NavMsgType::CNVX)
+    else if (type == E_NavMsgType::LNAV || type == E_NavMsgType::D1D2 || type == E_NavMsgType::CNVX)
     {
         ion.a0 = data[0];
         ion.a1 = data[1];
@@ -1831,7 +1868,7 @@ int readRnxNavB(
                 // ver.4
                 char typeStr[5] = "";
                 strncpy(typeStr, buff + 2, 3);
-                recType = E_NavRecType::_from_string(typeStr);
+                recType = string_to_enum<E_NavRecType>(typeStr);
 
                 strncpy(id, buff + 6, 3);
                 Sat = SatSys(id);
@@ -1839,13 +1876,13 @@ int readRnxNavB(
 
                 strncpy(typeStr, buff + 10, 4);
                 std::replace(typeStr, typeStr + 4, ' ', '\0');
-                msgType = E_NavMsgType::_from_string(typeStr);
+                msgType = string_to_enum<E_NavMsgType>(typeStr);
 
                 continue;
             }
 
             // decode satellite field
-            if (ver >= 3.0 || sys == +E_Sys::GAL || sys == +E_Sys::QZS)
+            if (ver >= 3.0 || sys == E_Sys::GAL || sys == E_Sys::QZS)
             {
                 // ver.3 or GAL/QZS
                 strncpy(id, buff, 3);
@@ -1899,24 +1936,26 @@ int readRnxNavB(
                 return 0;
             }
 
-            if (recType == +E_NavRecType::STO)
+            if (recType == E_NavRecType::STO)
             {
                 // decode STO code, SBAS ID & UTC ID for STO message
                 char code[19] = "";
                 strncpy(code, buff + 24, 18);
                 std::replace(code, code + 18, ' ', '\0');
-                data.push_back(E_StoCode::_from_string(code));
+                data.push_back(static_cast<int>(string_to_enum<E_StoCode>(code)));
 
                 strncpy(code, buff + 43, 18);
                 std::replace(code, code + 18, '-', '_');
                 std::replace(code, code + 18, ' ', '\0');
-                data.push_back(*(E_SbasId::_from_string_nothrow(code)));  // code may be empty
+                auto sbasId = string_to_enum_opt<E_SbasId>(code);
+                data.push_back(static_cast<int>(sbasId.value_or(E_SbasId{})));  // code may be empty
 
                 strncpy(code, buff + 62, 18);
                 std::replace(code, code + 18, '(', '_');
                 std::replace(code, code + 18, ')', '\0');
                 std::replace(code, code + 18, ' ', '\0');
-                data.push_back(*(E_UtcId::_from_string_nothrow(code)));  // code may be empty
+                auto utcId = string_to_enum_opt<E_UtcId>(code);
+                data.push_back(static_cast<int>(utcId.value_or(E_UtcId{})));  // code may be empty
             }
             else
             {
@@ -1928,9 +1967,9 @@ int readRnxNavB(
                 }
             }
 
-            if (recType == +E_NavRecType::NONE)
+            if (recType == E_NavRecType::NONE)
                 recType = E_NavRecType::EPH;
-            if (msgType == +E_NavMsgType::NONE)
+            if (msgType == E_NavMsgType::NONE)
                 msgType = defNavMsgType[sys];
         }
         else
@@ -1942,7 +1981,7 @@ int readRnxNavB(
                 data.push_back(str2num(p, 0, 19));
             }
             // decode ephemeris
-            if (recType == +E_NavRecType::EPH)
+            if (recType == E_NavRecType::EPH)
             {
                 switch (msgType)
                 {
@@ -1995,7 +2034,7 @@ int readRnxNavB(
                     }
                 }
             }
-            else if (recType == +E_NavRecType::STO)
+            else if (recType == E_NavRecType::STO)
             {
                 if (data.size() >= 7)
                 {
@@ -2003,7 +2042,7 @@ int readRnxNavB(
                     return decodeSto(ver, Sat, msgType, toc, data, sto);
                 }
             }
-            else if (recType == +E_NavRecType::EOP)
+            else if (recType == E_NavRecType::EOP)
             {
                 if (data.size() >= 11)
                 {
@@ -2011,7 +2050,7 @@ int readRnxNavB(
                     return decodeEop(ver, Sat, msgType, toc, data, eop);
                 }
             }
-            else if (recType == +E_NavRecType::ION)
+            else if (recType == E_NavRecType::ION)
             {
                 switch (sys)
                 {
@@ -2391,7 +2430,7 @@ void stageObservation(
     staging[key] = staged;
 
     BOOST_LOG_TRIVIAL(debug) << "Staged observation: type=" << obsType
-                             << " code=" << obsCode._to_string() << " freq=" << (int)frequency
+                             << " code=" << enum_to_string(obsCode) << " freq=" << (int)frequency
                              << " value=" << value;
 }
 
@@ -2458,7 +2497,7 @@ void stagePhaseObservation(
         {
             if (i > 0)
                 codes += ",";
-            codes += priorityCodes[i]._to_string();
+            codes += enum_to_string(priorityCodes[i]);
         }
         return codes;
     }() << "]" << " freq=" << (int)frequency
@@ -2519,7 +2558,7 @@ void commitStagedObservations(
         availableCodes.insert(staged.obsCode);
 
         BOOST_LOG_TRIVIAL(debug) << "Committed code observation: type=" << key.obsType
-                                 << " code=" << staged.obsCode._to_string()
+                                 << " code=" << enum_to_string(staged.obsCode)
                                  << " freq=" << (int)staged.frequency;
     }
 
@@ -2530,7 +2569,7 @@ void commitStagedObservations(
         {
             if (!codes.empty())
                 codes += ",";
-            codes += code._to_string();
+            codes += enum_to_string(code);
         }
         return codes;
     }() << "]";
@@ -2555,7 +2594,7 @@ void commitStagedObservations(
             {
                 if (!codes.empty())
                     codes += ",";
-                codes += code._to_string();
+                codes += enum_to_string(code);
             }
             return codes;
         }() << "]";
@@ -2564,31 +2603,31 @@ void commitStagedObservations(
         E_ObsCode resolvedCode = E_ObsCode::NONE;
         for (const auto& priorityCode : staged.priorityCodes)
         {
-            BOOST_LOG_TRIVIAL(debug)
-                << "Phase priority: Checking if " << priorityCode._to_string() << " is available";
+            BOOST_LOG_TRIVIAL(debug) << "Phase priority: Checking if "
+                                     << enum_to_string(priorityCode) << " is available";
             if (availableCodes.find(priorityCode) != availableCodes.end())
             {
                 resolvedCode = priorityCode;
                 BOOST_LOG_TRIVIAL(debug) << "Phase priority resolved: " << key.obsType << " -> "
-                                         << resolvedCode._to_string() << " (available)";
+                                         << enum_to_string(resolvedCode) << " (available)";
                 break;
             }
             else
             {
                 BOOST_LOG_TRIVIAL(debug)
-                    << "Phase priority: " << priorityCode._to_string() << " not available";
+                    << "Phase priority: " << enum_to_string(priorityCode) << " not available";
             }
         }
 
         // Fallback to first priority if none available
-        if (resolvedCode == +E_ObsCode::NONE && !staged.priorityCodes.empty())
+        if (resolvedCode == E_ObsCode::NONE && !staged.priorityCodes.empty())
         {
             resolvedCode = staged.priorityCodes[0];
             BOOST_LOG_TRIVIAL(warning) << "Phase priority fallback: " << key.obsType << " -> "
-                                       << resolvedCode._to_string() << " (no available codes)";
+                                       << enum_to_string(resolvedCode) << " (no available codes)";
         }
 
-        if (resolvedCode != +E_ObsCode::NONE)
+        if (resolvedCode != E_ObsCode::NONE)
         {
             auto&   sigList = obs.sigsLists[staged.frequency];
             RawSig* rawSig  = findOrCreateSignal(sigList, resolvedCode);
@@ -2598,7 +2637,7 @@ void commitStagedObservations(
 
             BOOST_LOG_TRIVIAL(debug)
                 << "Committed phase observation: type=" << key.obsType
-                << " code=" << resolvedCode._to_string() << " freq=" << (int)staged.frequency;
+                << " code=" << enum_to_string(resolvedCode) << " freq=" << (int)staged.frequency;
         }
         else
         {

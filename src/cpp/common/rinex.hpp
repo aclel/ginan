@@ -56,9 +56,8 @@ struct ION;   // Ionospheric parameters
  *
  * @note Values correspond to RINEX navigation message types
  */
-BETTER_ENUM(
-    E_EphType,
-    short int,
+enum class E_EphType : short int
+{
     NONE,  ///< Unknown or uninitialized ephemeris type
     EPH,   ///< GPS/QZS LNAV, GAL IFNV, BDS D1D2 Ephemeris
     GEPH,  ///< GLONASS Ephemeris (frequency division)
@@ -67,7 +66,7 @@ BETTER_ENUM(
     STO,   ///< System Time Offset message
     EOP,   ///< Earth Orientation Parameters message
     ION    ///< Ionospheric parameters message
-);
+};
 /**
  * @brief RINEX observation code type structure
  *
@@ -99,7 +98,7 @@ struct CodeType
      */
     E_ObsCode getEffectiveCode() const
     {
-        if (code != +E_ObsCode::NONE)
+        if (code != E_ObsCode::NONE)
         {
             return code;
         }
@@ -115,10 +114,7 @@ struct CodeType
      * @return true if code2 is set and code is not set
      * @return false otherwise
      */
-    bool isRinex2Style() const
-    {
-        return (code2 != +E_ObsCode2::NONE) && (code == +E_ObsCode::NONE);
-    }
+    bool isRinex2Style() const { return (code2 != E_ObsCode2::NONE) && (code == E_ObsCode::NONE); }
 
     /**
      * @brief Check if this represents a RINEX 3 style observation code
@@ -126,7 +122,7 @@ struct CodeType
      * @return true if code is set (regardless of code2 status)
      * @return false if code is not set
      */
-    bool isRinex3Style() const { return (code != +E_ObsCode::NONE); }
+    bool isRinex3Style() const { return (code != E_ObsCode::NONE); }
 };
 
 /**
@@ -732,7 +728,7 @@ using ObservationStaging = std::map<ObservationKey, StagedObservation>;
 inline std::ostream& operator<<(std::ostream& os, const ObservationKey& key)
 {
     os << "{obsType:" << key.obsType << ",freq:" << key.frequency
-       << ",obsCode:" << key.obsCode._to_string() << "}";
+       << ",obsCode:" << enum_to_string(key.obsCode) << "}";
     return os;
 }
 

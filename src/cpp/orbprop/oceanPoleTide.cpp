@@ -3,6 +3,7 @@
 #include <fstream>
 #include <iostream>
 #include <sstream>
+#include "common/constants.hpp"
 
 OceanPoleTide oceanPoleTide;
 
@@ -58,8 +59,8 @@ void OceanPoleTide::estimate(double m1, double m2, MatrixXd& Cnm, MatrixXd& Snm)
 {
     double coeff1 = m1 * gamma2_r + m2 * gamma2_i;
     double coeff2 = m2 * gamma2_r - m1 * gamma2_i;
-    coeff1 *= M_PI / 180 / 3600;
-    coeff2 *= M_PI / 180 / 3600;
+    coeff1 *= PI / 180 / 3600;
+    coeff2 *= PI / 180 / 3600;
     Cnm += coeff1 * cnmp + coeff2 * cnmm;
     Snm += coeff1 * snmp + coeff2 * snmm;
 }

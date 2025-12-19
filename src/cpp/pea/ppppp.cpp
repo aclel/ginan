@@ -790,7 +790,7 @@ void updateRecClocks(
             continue;
         }
 
-        if (rec.sol.status != +E_Solution::SINGLE)
+        if (rec.sol.status != E_Solution::SINGLE)
         {
             trace << "\n"
                   << "Receiver clock of " << id << " won't be adjusted due to bad SPP";
@@ -816,7 +816,7 @@ void updateRecClocks(
             recClk_m
         );  // Get filtered rec clock of last epoch (not updated yet)
 
-        if (found == +E_Source::KALMAN && rec.sol.clkAdjustReady)
+        if (found == E_Source::KALMAN && rec.sol.clkAdjustReady)
         {
             KFKey rateKey = clkKey;
             rateKey.type  = KF::REC_CLOCK_RATE;
@@ -856,7 +856,7 @@ void updateRecClocks(
                 kfState.setKFTrans(clkKey, KFState::oneKey, recClkAdj, clkInit);
 
                 InitialState rateInit = initialStateFromConfig(recOpts.clk_rate);
-                if (rateInit.estimate && found == +E_Source::KALMAN)
+                if (rateInit.estimate && found == E_Source::KALMAN)
                 {
                     double clkRateAjd = recClkAdj / dt;
                     kfState.setKFTrans(rateKey, KFState::oneKey, clkRateAjd, rateInit);
@@ -1648,7 +1648,7 @@ void resetFilterbyConfig(Trace& trace, KFState& kfState)
     auto& reset_states = acsConfig.pppOpts.reset_states;
 
     bool foundAll =
-        (std::find(reset_states.begin(), reset_states.end(), +KF::ALL) != reset_states.end());
+        (std::find(reset_states.begin(), reset_states.end(), KF::ALL) != reset_states.end());
 
     for (auto& [key, index] : kfState.kfIndexMap)
     {
@@ -1669,7 +1669,7 @@ void resetFilterbyConfig(Trace& trace, KFState& kfState)
     string reset_states_str = "";
     for (auto& state : reset_states)
     {
-        reset_states_str += std::string(state._to_string()) + " ";
+        reset_states_str += std::string(enum_to_string(state)) + " ";
     }
     mongoEditing("", "", tsync, "reset", "", 1, reset_states_str);
 }

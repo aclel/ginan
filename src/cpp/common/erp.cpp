@@ -601,7 +601,7 @@ ERPValues getErpFromFilter(const KFState& kfState)
 {
     ERPValues erpv;
 
-    bool found = false;
+    bool found = true;
     for (int i = 0; i < 3; i++)
     {
         double val     = 0;
@@ -613,10 +613,9 @@ ERPValues getErpFromFilter(const KFState& kfState)
         kfKey.num = i;
 
         kfKey.type = KF::EOP;
-        found |= kfState.getKFValue(kfKey, val, &valVar);
-
+        found      = found && (kfState.getKFValue(kfKey, val, &valVar) != E_Source::NONE);
         kfKey.type = KF::EOP_RATE;
-        found |= kfState.getKFValue(kfKey, rate, &rateVar);
+        found      = found && (kfState.getKFValue(kfKey, rate, &rateVar) != E_Source::NONE);
 
         switch (i)
         {
@@ -690,7 +689,9 @@ void readErp(
         string line;
 
         getline(filestream, line);
-
+        // Skip empty or short lines
+        if (line.size() < 58)
+            continue;
         if ((line[16] == 'I' || line[16] == 'P') && (line[57] == 'I' || line[57] == 'P'))
             readIersFinal(line, erpMap);
         else if (line.size() == 218)

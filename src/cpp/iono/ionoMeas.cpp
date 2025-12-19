@@ -185,8 +185,8 @@ void obsIonoData(Trace& trace, Receiver& rec)
                 obs.stecVar =
                     ((satStat.ambvar + 2 * varL) + SQR(PHASE_BIAS_STD)) / SQR(obs.stecToDelay);
 
-                obs.stecCodeCombo =
-                    obs.sigs[frq1].code._to_integral() * 100 + obs.sigs[frq2].code._to_integral();
+                obs.stecCodeCombo = static_cast<int>(obs.sigs[frq1].code) * 100 +
+                                    static_cast<int>(obs.sigs[frq2].code);
 
                 satStat.prevSTEC = lc.GF_Phas_m;
 
@@ -255,9 +255,9 @@ void writeIonStec(string filename, KFState& kfState)
         double stecVal = 0;
         double stecVar = 0;
 
-        bool pass = kfState.getKFValue(key, stecVal, &stecVar);
+        E_Source pass = kfState.getKFValue(key, stecVal, &stecVar);
 
-        if (pass == false)
+        if (pass == E_Source::NONE)
             continue;
 
         GObs* obs_ptr = nullptr;
@@ -368,11 +368,11 @@ void obsIonoDataFromFilter(
             kfKey.str  = obs.mount;
             kfKey.Sat  = obs.Sat;
 
-            double stecVal = 0;
-            double stecVar = 0;
-            bool   pass    = measKFstate.getKFValue(kfKey, stecVal, &stecVar);
+            double   stecVal = 0;
+            double   stecVar = 0;
+            E_Source pass    = measKFstate.getKFValue(kfKey, stecVal, &stecVar);
 
-            if (pass == false)
+            if (pass == E_Source::NONE)
             {
                 obs.ionExclude = 1;
                 continue;

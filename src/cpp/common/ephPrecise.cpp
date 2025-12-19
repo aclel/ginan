@@ -76,7 +76,7 @@ int readdcb(string file)
 
         SatSys Sat(str1);
 
-        if (Sat.sys == +E_Sys::GPS)
+        if (Sat.sys == E_Sys::GPS)
         {
             if (type == "P1_P2")
             {
@@ -96,7 +96,7 @@ int readdcb(string file)
             else
                 continue;
         }
-        else if (Sat.sys == +E_Sys::GLO)
+        else if (Sat.sys == E_Sys::GLO)
         {
             if (type == "P1_P2")
             {
@@ -132,8 +132,9 @@ int readdcb(string file)
             entry.name = "";
             id         = str1;
         }
+        updateRefTime(entry);
 
-        if (Sat.sys == +E_Sys::GLO && Sat.prn == 0)
+        if (Sat.sys == E_Sys::GLO && Sat.prn == 0)
         {
             // this seems to be a receiver
             // for ambiguous GLO receiver bias id (i.e. PRN not specified), duplicate bias entry for
@@ -146,7 +147,7 @@ int readdcb(string file)
                 pushBiasEntry(id, entry);
             }
         }
-        else if (Sat.sys == +E_Sys::GLO && Sat.prn != 0)
+        else if (Sat.sys == E_Sys::GLO && Sat.prn != 0)
         {
             // this can be a receiver or satellite
             id = id + ":" + Sat.id();

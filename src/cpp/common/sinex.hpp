@@ -664,7 +664,7 @@ struct Sinex
 
     // constructor
     Sinex(bool epochshavebias = false)
-        : epochshavebias(epochshavebias){
+        : epochshavebias(epochshavebias) {
 
           };
 

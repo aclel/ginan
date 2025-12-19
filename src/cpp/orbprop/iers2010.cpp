@@ -20,7 +20,7 @@
 
 HfOceanEop hfEop;
 
-const GTime time2010 = GEpoch{2010, E_Month::JAN, 1, 0, 0, 0};
+const GTime time2010 = GEpoch{2010, static_cast<int>(E_Month::JAN), 1, 0, 0, 0};
 
 void IERS2010::PMGravi(
     GTime   time,     ///< Time

@@ -34,8 +34,8 @@ struct GinAR_opt
     string           recv;
     map<E_Sys, bool> sys_solve;
 
-    bool endu = false;
-    int  mode = E_ARmode::OFF;      /* AR mode */
+    bool     endu = false;
+    E_ARmode mode = E_ARmode::OFF;  /* AR mode */
 
     int nset = 0;                   /* candidate set size for lambda */
     int nitr = 3;                   /* number of iterations for iter_rnd */

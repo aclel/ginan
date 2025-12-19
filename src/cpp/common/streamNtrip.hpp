@@ -40,5 +40,5 @@ struct NtripStream : NtripResponder
 
     void serverResponse(unsigned int statusCode, string httpVersion) override;
 
-    ~NtripStream(){};
+    ~NtripStream() {};
 };

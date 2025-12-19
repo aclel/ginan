@@ -9,6 +9,8 @@ namespace bp = boost::asio::placeholders;
 using std::lock_guard;
 using std::mutex;
 
+#define MAX_SBAS_MESS_AGE 600
+
 #define CLEAN_UP_AND_RETURN_ON_FAILURE \
                                        \
     if (inputStream.fail())            \
@@ -17,6 +19,8 @@ using std::mutex;
         inputStream.seekg(pos);        \
         return;                        \
     }
+
+namespace bp = boost::asio::placeholders;
 
 void DS2DCParser::parse(std::istream& inputStream)
 {
@@ -135,7 +139,7 @@ void DS2DCParser::parse(std::istream& inputStream)
             for (auto it = sbasMessages.begin(); it != sbasMessages.end();)
             {
                 auto& [time, sbasData] = *it;
-                if ((frametime - time).to_double() > 90)
+                if ((frametime - time).to_double() > MAX_SBAS_MESS_AGE)
                 {
                     it = sbasMessages.erase(it);
                 }

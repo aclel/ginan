@@ -38,5 +38,5 @@ struct SisnetStream : TcpSocket
     void sisnetStartHandler(const boost::system::error_code& err);
     void requestResponseHandler(const boost::system::error_code& err) override;
 
-    ~SisnetStream(){};
+    ~SisnetStream() {};
 };

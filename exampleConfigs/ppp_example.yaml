@@ -131,7 +131,7 @@ processing_options:
   epoch_control:
     # start_epoch: 2019-07-18 00:00:00
     # end_epoch: 2019-07-18 23:59:30
-    max_epochs: 2870
+    #max_epochs: 30
     epoch_interval: 30 # seconds
     wait_next_epoch: 3600 # seconds (make large for post-processing)
 
@@ -165,12 +165,18 @@ processing_options:
     preprocess_all_data: true
 
   spp:
-    # always_reinitialise: false # Reset SPP state to zero to avoid potential for lock-in of bad states
-    max_lsq_iterations: 12 # Maximum number of iterations of least squares allowed for convergence
     outlier_screening:
-      raim: true # Enable Receiver Autonomous Integrity Monitoring
-      max_gdop: 30 # Maximum dilution of precision before error is flagged
-
+      chi_square:
+        enable: true
+        sigma_threshold: 5
+      least_square:
+        max_iterations: 1
+        sigma_check: false
+        omega_test: true
+        meas_sigma_threshold: 5
+      raim:
+        enable: true
+        max_iterations: 2
   ppp_filter:
     outlier_screening:
       chi_square:
@@ -202,7 +208,6 @@ processing_options:
       enable: true
       lag: -1
       # interval: 86400
-      inverter: LDLT # Inverter to be used within the rts processor, which may provide different performance outcomes in terms of processing time and accuracy and stability
       filename: <CONFIG>_<RECEIVER>.rts
 
     # periodic_reset:
@@ -289,7 +294,7 @@ estimation_parameters:
             process_noise: [0.001]
 
 mongo: # Mongo is a database used to store results and intermediate values for later analysis and inter-process communication
-  enable: primary # Enable and connect to mongo database {none,primary,secondary,both}
+  enable: none # Enable and connect to mongo database {none,primary,secondary,both}
   primary_uri: mongodb://localhost:27017 # Location and port of the mongo database to connect to
   primary_database: <CONFIG>
   primary_suffix: "" # Suffix to append to database elements to make distinctions between runs for comparison

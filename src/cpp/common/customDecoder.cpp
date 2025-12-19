@@ -1,7 +1,7 @@
 // #pragma GCC optimize ("O0")
 
 #include "common/customDecoder.hpp"
-#include <bsoncxx/json.hpp>
+#include <boost/json.hpp>
 #include "common/constants.hpp"
 #include "common/enums.h"
 #include "common/gTime.hpp"
@@ -87,13 +87,13 @@ void CustomDecoder::decodeMEAS(vector<unsigned char>& payload)
         dataField <<= 8;  // get leading ones
         dataField >>= 8;
 
-        E_MEASDataType measDataType = E_MEASDataType::_from_integral(dataType);
+        E_MEASDataType measDataType = int_to_enum<E_MEASDataType>(dataType);
 
         switch (measDataType)
         {
             default:
             {
-                // 				std::cout << "\n" << measDataType._to_string();
+                // 				std::cout << "\n" << enum_to_string(measDataType);
                 break;
             }
             case E_MEASDataType::GYRO_X:
@@ -101,14 +101,14 @@ void CustomDecoder::decodeMEAS(vector<unsigned char>& payload)
             case E_MEASDataType::GYRO_Z:
             {
                 double gyro = dataField * P2_12;
-                // 				std::cout << "\n" << measDataType._to_string() << " : " << gyro;
+                // 				std::cout << "\n" << enum_to_string(measDataType) << " : " << gyro;
 
                 int index = 0;
-                if (measDataType == +E_MEASDataType::GYRO_X)
+                if (measDataType == E_MEASDataType::GYRO_X)
                     index = 0;  // ubx indices are dumb and not ordered
-                else if (measDataType == +E_MEASDataType::GYRO_Y)
+                else if (measDataType == E_MEASDataType::GYRO_Y)
                     index = 1;
-                else if (measDataType == +E_MEASDataType::GYRO_Z)
+                else if (measDataType == E_MEASDataType::GYRO_Z)
                     index = 2;
 
                 gyroDataMaps[recId][lastTime + timeOffset][index] = gyro;
@@ -120,14 +120,14 @@ void CustomDecoder::decodeMEAS(vector<unsigned char>& payload)
             case E_MEASDataType::ACCL_Z:
             {
                 double accl = dataField * P2_10;
-                // 				std::cout << "\n" << measDataType._to_string() << " : " << accl;
+                // 				std::cout << "\n" << enum_to_string(measDataType) << " : " << accl;
 
                 int index = 0;
-                if (measDataType == +E_MEASDataType::ACCL_X)
+                if (measDataType == E_MEASDataType::ACCL_X)
                     index = 0;
-                else if (measDataType == +E_MEASDataType::ACCL_Y)
+                else if (measDataType == E_MEASDataType::ACCL_Y)
                     index = 1;
-                else if (measDataType == +E_MEASDataType::ACCL_Z)
+                else if (measDataType == E_MEASDataType::ACCL_Z)
                     index = 2;
 
                 acclDataMaps[recId][lastTime + timeOffset][index] = accl;
@@ -137,7 +137,7 @@ void CustomDecoder::decodeMEAS(vector<unsigned char>& payload)
             case E_MEASDataType::GYRO_TEMP:
             {
                 double temp = dataField * 1e-2;
-                // 				std::cout << "\n" << measDataType._to_string() << " : " << temp;
+                // 				std::cout << "\n" << enum_to_string(measDataType) << " : " << temp;
 
                 tempDataMaps[recId][lastTime + timeOffset] = temp;
 

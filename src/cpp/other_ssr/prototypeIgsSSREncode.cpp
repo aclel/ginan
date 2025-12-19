@@ -9,64 +9,77 @@ map<SatSys, SSRClk> last_clock;
 
 unsigned short IGS_SSR_subtype(IgsSSRSubtype type, E_Sys sys)
 {
-    if (type == +IgsSSRSubtype::GROUP_ION)
-        return IgsSSRSubtype::IONVTEC;
+    // Direct enum comparison (BETTER_ENUM unary '+' removed)
+    if (type == IgsSSRSubtype::GROUP_ION)
+        return static_cast<unsigned short>(IgsSSRSubtype::IONVTEC);
 
     switch (sys)
     {
         case E_Sys::GPS:
-            return type + IgsSSRSubtype::GPS_OFFSET;
+            return static_cast<unsigned short>(
+                static_cast<int>(type) + static_cast<int>(IgsSSRSubtype::GPS_OFFSET)
+            );
         case E_Sys::GLO:
-            return type + IgsSSRSubtype::GLO_OFFSET;
+            return static_cast<unsigned short>(
+                static_cast<int>(type) + static_cast<int>(IgsSSRSubtype::GLO_OFFSET)
+            );
         case E_Sys::GAL:
-            return type + IgsSSRSubtype::GAL_OFFSET;
+            return static_cast<unsigned short>(
+                static_cast<int>(type) + static_cast<int>(IgsSSRSubtype::GAL_OFFSET)
+            );
         case E_Sys::QZS:
-            return type + IgsSSRSubtype::QZS_OFFSET;
+            return static_cast<unsigned short>(
+                static_cast<int>(type) + static_cast<int>(IgsSSRSubtype::QZS_OFFSET)
+            );
         case E_Sys::BDS:
-            return type + IgsSSRSubtype::BDS_OFFSET;
+            return static_cast<unsigned short>(
+                static_cast<int>(type) + static_cast<int>(IgsSSRSubtype::BDS_OFFSET)
+            );
         case E_Sys::SBS:
-            return type + IgsSSRSubtype::SBS_OFFSET;
+            return static_cast<unsigned short>(
+                static_cast<int>(type) + static_cast<int>(IgsSSRSubtype::SBS_OFFSET)
+            );
     }
-    return IgsSSRSubtype::NONE;
+    return static_cast<unsigned short>(IgsSSRSubtype::NONE);
 }
 
 IgsSSRSubtype IGS_SSR_group(IgsSSRSubtype subType, E_Sys& sys)
 {
     sys = E_Sys::NONE;
-    if (subType == +IgsSSRSubtype::IONVTEC)
+    if (subType == IgsSSRSubtype::IONVTEC)
     {
         return IgsSSRSubtype::GROUP_ION;
     }
 
-    int iSubType = subType;
+    int iSubType = static_cast<int>(subType);
 
     switch (iSubType / 20)
     {
         case 1:
             sys = E_Sys::GPS;
-            return IgsSSRSubtype::_from_integral(iSubType % 20);
+            return int_to_enum<IgsSSRSubtype>(iSubType % 20);
         case 2:
             sys = E_Sys::GLO;
-            return IgsSSRSubtype::_from_integral(iSubType % 20);
+            return int_to_enum<IgsSSRSubtype>(iSubType % 20);
         case 3:
             sys = E_Sys::GAL;
-            return IgsSSRSubtype::_from_integral(iSubType % 20);
+            return int_to_enum<IgsSSRSubtype>(iSubType % 20);
         case 4:
             sys = E_Sys::QZS;
-            return IgsSSRSubtype::_from_integral(iSubType % 20);
+            return int_to_enum<IgsSSRSubtype>(iSubType % 20);
         case 5:
             sys = E_Sys::BDS;
-            return IgsSSRSubtype::_from_integral(iSubType % 20);
+            return int_to_enum<IgsSSRSubtype>(iSubType % 20);
         case 6:
             sys = E_Sys::SBS;
-            return IgsSSRSubtype::_from_integral(iSubType % 20);
+            return int_to_enum<IgsSSRSubtype>(iSubType % 20);
     }
     return IgsSSRSubtype::NONE;
 }
 
 vector<uint8_t> encodeIGS_ORB(map<SatSys, SSROut>& orbClkMap, E_Sys sys, bool last)
 {
-    tracepdeex(2, std::cout, "\n Encoding IGS SSR ORB for %s", sys._to_string());
+    tracepdeex(2, std::cout, "\n Encoding IGS SSR ORB for %s", enum_to_string(sys));
 
     int numSat = orbClkMap.size();
     if (numSat == 0)
@@ -136,7 +149,7 @@ vector<uint8_t> encodeIGS_ORB(map<SatSys, SSROut>& orbClkMap, E_Sys sys, bool la
 
 vector<uint8_t> encodeIGS_CLK(map<SatSys, SSROut>& orbClkMap, E_Sys sys, bool last)
 {
-    tracepdeex(2, std::cout, "\n Encoding IGS SSR CLK for %s", sys._to_string());
+    tracepdeex(2, std::cout, "\n Encoding IGS SSR CLK for %s", enum_to_string(sys));
 
     int numSat = orbClkMap.size();
     if (numSat == 0)
@@ -200,7 +213,7 @@ vector<uint8_t> encodeIGS_CLK(map<SatSys, SSROut>& orbClkMap, E_Sys sys, bool la
 
 vector<uint8_t> encodeIGS_CMB(map<SatSys, SSROut>& orbClkMap, E_Sys sys, bool last)
 {
-    tracepdeex(2, std::cout, "\n Encoding IGS SSR CMB for %s", sys._to_string());
+    tracepdeex(2, std::cout, "\n Encoding IGS SSR CMB for %s", enum_to_string(sys));
 
     int numSat = orbClkMap.size();
     if (numSat == 0)
@@ -280,7 +293,7 @@ vector<uint8_t> encodeIGS_CMB(map<SatSys, SSROut>& orbClkMap, E_Sys sys, bool la
 
 vector<uint8_t> encodeIGS_HRC(map<SatSys, SSROut>& orbClkMap, E_Sys sys, bool last)
 {
-    tracepdeex(2, std::cout, "\n Encoding IGS SSR HRC for %s", sys._to_string());
+    tracepdeex(2, std::cout, "\n Encoding IGS SSR HRC for %s", enum_to_string(sys));
 
     map<SatSys, double> hrClocks;
     for (auto& [Sat, ssrOut] : orbClkMap)
@@ -352,7 +365,7 @@ vector<uint8_t> encodeIGS_HRC(map<SatSys, SSROut>& orbClkMap, E_Sys sys, bool la
 
 vector<uint8_t> encodeIGS_COD(map<SatSys, SSRCodeBias>& codBiasMap, E_Sys sys, bool last)
 {
-    tracepdeex(2, std::cout, "\n Encoding IGS SSR COD for %s", sys._to_string());
+    tracepdeex(2, std::cout, "\n Encoding IGS SSR COD for %s", enum_to_string(sys));
 
     if (igsSSRCode2Index.find(sys) == igsSSRCode2Index.end())
         return vector<uint8_t>();
@@ -440,7 +453,7 @@ vector<uint8_t> encodeIGS_COD(map<SatSys, SSRCodeBias>& codBiasMap, E_Sys sys, b
 
 vector<uint8_t> encodeIGS_PHS(map<SatSys, SSRPhasBias>& ssrPBMap, E_Sys sys, bool last)
 {
-    tracepdeex(2, std::cout, "\n Encoding IGS SSR PHS for %s", sys._to_string());
+    tracepdeex(2, std::cout, "\n Encoding IGS SSR PHS for %s", enum_to_string(sys));
 
     if (igsSSRCode2Index.find(sys) == igsSSRCode2Index.end())
         return vector<uint8_t>();
@@ -539,7 +552,7 @@ vector<uint8_t> encodeIGS_PHS(map<SatSys, SSRPhasBias>& ssrPBMap, E_Sys sys, boo
 
 vector<uint8_t> encodeIGS_URA(map<SatSys, SSRUra>& uraMap, E_Sys sys, bool last)
 {
-    tracepdeex(2, std::cout, "\n Encoding IGS SSR URA for %s", sys._to_string());
+    tracepdeex(2, std::cout, "\n Encoding IGS SSR URA for %s", enum_to_string(sys));
 
     int numSat = uraMap.size();
     if (numSat == 0)

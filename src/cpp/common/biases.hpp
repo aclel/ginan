@@ -52,6 +52,8 @@ struct BiasMap : array<map<string, ObsObsBiasMap>, NUM_MEAS_TYPES>
 
 E_ObsCode str2code(string& input, E_MeasType& measType);
 
+void updateRefTime(BiasEntry& entry);
+
 void pushBiasEntry(string id, BiasEntry entry);
 
 void initialiseBias();

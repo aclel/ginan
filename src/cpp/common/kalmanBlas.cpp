@@ -3,11 +3,7 @@
 #include <cstring>
 
 // Compute H*P using BLAS
-void KalmanFilterBLAS::computeHP(
-    const MatrixXd& H,
-    const MatrixXd& P,
-    MatrixXd& HP
-)
+void KalmanFilterBLAS::computeHP(const MatrixXd& H, const MatrixXd& P, MatrixXd& HP)
 {
     int numH = H.rows();
     int numX = H.cols();
@@ -21,20 +17,20 @@ void KalmanFilterBLAS::computeHP(
     // HP = H * P
     // C = alpha*A*B + beta*C
     LapackWrapper::dgemm(
-        LapackWrapper::CblasColMajor,        // Eigen uses column-major storage
-        LapackWrapper::CblasNoTrans,         // Don't transpose H
-        LapackWrapper::CblasNoTrans,         // Don't transpose P
-        numH,                 // Rows of H (and HP)
-        numX,                 // Cols of P (and HP)
-        numX,                 // Cols of H / rows of P
-        1.0,                  // alpha = 1.0
-        H.data(),             // Matrix H
-        H.rows(),             // Leading dimension of H
-        P.data(),             // Matrix P
-        P.rows(),             // Leading dimension of P
-        0.0,                  // beta = 0.0 (don't accumulate)
-        HP.data(),            // Output matrix HP
-        HP.rows()             // Leading dimension of HP
+        LapackWrapper::CblasColMajor,  // Eigen uses column-major storage
+        LapackWrapper::CblasNoTrans,   // Don't transpose H
+        LapackWrapper::CblasNoTrans,   // Don't transpose P
+        numH,                          // Rows of H (and HP)
+        numX,                          // Cols of P (and HP)
+        numX,                          // Cols of H / rows of P
+        1.0,                           // alpha = 1.0
+        H.data(),                      // Matrix H
+        H.rows(),                      // Leading dimension of H
+        P.data(),                      // Matrix P
+        P.rows(),                      // Leading dimension of P
+        0.0,                           // beta = 0.0 (don't accumulate)
+        HP.data(),                     // Output matrix HP
+        HP.rows()                      // Leading dimension of HP
     );
 }
 
@@ -43,7 +39,7 @@ void KalmanFilterBLAS::computeInnovationCovariance(
     const MatrixXd& H,
     const MatrixXd& P,
     const MatrixXd& R,
-    MatrixXd& Q
+    MatrixXd&       Q
 )
 {
     int numH = H.rows();
@@ -65,31 +61,27 @@ void KalmanFilterBLAS::computeInnovationCovariance(
     // Step 3: Q = HP * H' + Q (Q already contains R)
     // C = alpha*A*B' + beta*C
     LapackWrapper::dgemm(
-        LapackWrapper::CblasColMajor,        // Eigen uses column-major storage
-        LapackWrapper::CblasNoTrans,         // Don't transpose HP
-        LapackWrapper::CblasTrans,           // Transpose H
-        numH,                 // Rows of HP (and Q)
-        numH,                 // Rows of H (cols of H')
-        numX,                 // Cols of HP / cols of H
-        1.0,                  // alpha = 1.0
-        HP.data(),            // Matrix HP
-        HP.rows(),            // Leading dimension of HP
-        H.data(),             // Matrix H (will be transposed)
-        H.rows(),             // Leading dimension of H
-        1.0,                  // beta = 1.0 (accumulate with R)
-        Q.data(),             // Output matrix Q
-        Q.rows()              // Leading dimension of Q
+        LapackWrapper::CblasColMajor,  // Eigen uses column-major storage
+        LapackWrapper::CblasNoTrans,   // Don't transpose HP
+        LapackWrapper::CblasTrans,     // Transpose H
+        numH,                          // Rows of HP (and Q)
+        numH,                          // Rows of H (cols of H')
+        numX,                          // Cols of HP / cols of H
+        1.0,                           // alpha = 1.0
+        HP.data(),                     // Matrix HP
+        HP.rows(),                     // Leading dimension of HP
+        H.data(),                      // Matrix H (will be transposed)
+        H.rows(),                      // Leading dimension of H
+        1.0,                           // beta = 1.0 (accumulate with R)
+        Q.data(),                      // Output matrix Q
+        Q.rows()                       // Leading dimension of Q
     );
 }
 
 // Solve linear system Q*X = B using LAPACKE with fallback chain
-bool KalmanFilterBLAS::solveLinearSystem(
-    MatrixXd& Q,
-    MatrixXd& B,
-    E_Inverter inverter
-)
+bool KalmanFilterBLAS::solveLinearSystem(MatrixXd& Q, MatrixXd& B, E_Inverter inverter)
 {
-    int n = Q.rows();
+    int n    = Q.rows();
     int nrhs = B.cols();
     int info;
 
@@ -97,9 +89,9 @@ bool KalmanFilterBLAS::solveLinearSystem(
     MatrixXd Q_backup = Q;
     MatrixXd B_backup = B;
 
-    bool repeat = true;
-    int attempts = 0;
-    const int max_attempts = 10; // Prevent infinite loops
+    bool      repeat       = true;
+    int       attempts     = 0;
+    const int max_attempts = 10;  // Prevent infinite loops
 
     while (repeat && attempts < max_attempts)
     {
@@ -113,26 +105,25 @@ bool KalmanFilterBLAS::solveLinearSystem(
                 // Try 1: Cholesky factorization (dposv) - fastest but requires positive definite
                 info = LapackWrapper::dposv(
                     LapackWrapper::COL_MAJOR,
-                    'U',              // Upper triangle
-                    n,                // Order of matrix
-                    nrhs,             // Number of right-hand sides
-                    Q.data(),         // Matrix (modified on output)
-                    n,                // Leading dimension
-                    B.data(),         // RHS on input, solution on output
-                    n                 // Leading dimension of B
+                    'U',       // Upper triangle
+                    n,         // Order of matrix
+                    nrhs,      // Number of right-hand sides
+                    Q.data(),  // Matrix (modified on output)
+                    n,         // Leading dimension
+                    B.data(),  // RHS on input, solution on output
+                    n          // Leading dimension of B
                 );
 
                 if (info != 0)
                 {
-                    BOOST_LOG_TRIVIAL(warning)
-                        << "LapackWrapper::dposv failed with info = " << info
-                        << ", falling back to LDLT";
+                    BOOST_LOG_TRIVIAL(warning) << "LapackWrapper::dposv failed with info = " << info
+                                               << ", falling back to LDLT";
 
                     // Restore from backup and retry with LDLT
-                    Q = Q_backup;
-                    B = B_backup;
+                    Q        = Q_backup;
+                    B        = B_backup;
                     inverter = E_Inverter::LDLT;
-                    repeat = true;
+                    repeat   = true;
                     continue;
                 }
 
@@ -146,27 +137,26 @@ bool KalmanFilterBLAS::solveLinearSystem(
 
                 info = LapackWrapper::dsysv(
                     LapackWrapper::COL_MAJOR,
-                    'U',              // Upper triangle
-                    n,                // Order of matrix
-                    nrhs,             // Number of right-hand sides
-                    Q.data(),         // Matrix (modified on output)
-                    n,                // Leading dimension
-                    ipiv.data(),      // Pivot indices
-                    B.data(),         // RHS on input, solution on output
-                    n                 // Leading dimension of B
+                    'U',          // Upper triangle
+                    n,            // Order of matrix
+                    nrhs,         // Number of right-hand sides
+                    Q.data(),     // Matrix (modified on output)
+                    n,            // Leading dimension
+                    ipiv.data(),  // Pivot indices
+                    B.data(),     // RHS on input, solution on output
+                    n             // Leading dimension of B
                 );
 
                 if (info != 0)
                 {
-                    BOOST_LOG_TRIVIAL(warning)
-                        << "LapackWrapper::dsysv failed with info = " << info
-                        << ", falling back to LU factorization";
+                    BOOST_LOG_TRIVIAL(warning) << "LapackWrapper::dsysv failed with info = " << info
+                                               << ", falling back to LU factorization";
 
                     // Restore from backup and retry with LU
-                    Q = Q_backup;
-                    B = B_backup;
+                    Q        = Q_backup;
+                    B        = B_backup;
                     inverter = E_Inverter::INV;
-                    repeat = true;
+                    repeat   = true;
                     continue;
                 }
 
@@ -180,20 +170,19 @@ bool KalmanFilterBLAS::solveLinearSystem(
 
                 info = LapackWrapper::dgesv(
                     LapackWrapper::COL_MAJOR,
-                    n,                // Order of matrix
-                    nrhs,             // Number of right-hand sides
-                    Q.data(),         // Matrix (modified on output)
-                    n,                // Leading dimension
-                    ipiv.data(),      // Pivot indices
-                    B.data(),         // RHS on input, solution on output
-                    n                 // Leading dimension of B
+                    n,            // Order of matrix
+                    nrhs,         // Number of right-hand sides
+                    Q.data(),     // Matrix (modified on output)
+                    n,            // Leading dimension
+                    ipiv.data(),  // Pivot indices
+                    B.data(),     // RHS on input, solution on output
+                    n             // Leading dimension of B
                 );
 
                 if (info != 0)
                 {
-                    BOOST_LOG_TRIVIAL(error)
-                        << "LapackWrapper::dgesv failed with info = " << info
-                        << " - all solver methods exhausted";
+                    BOOST_LOG_TRIVIAL(error) << "LapackWrapper::dgesv failed with info = " << info
+                                             << " - all solver methods exhausted";
                     return false;
                 }
 
@@ -202,8 +191,7 @@ bool KalmanFilterBLAS::solveLinearSystem(
 
             default:
             {
-                BOOST_LOG_TRIVIAL(error)
-                    << "Unknown inverter type: " << inverter;
+                BOOST_LOG_TRIVIAL(error) << "Unknown inverter type: " << inverter;
                 return false;
             }
         }
@@ -211,8 +199,9 @@ bool KalmanFilterBLAS::solveLinearSystem(
 
     if (attempts >= max_attempts)
     {
-        BOOST_LOG_TRIVIAL(error)
-            << "Maximum solver attempts reached - possible configuration error";
+        BOOST_LOG_TRIVIAL(
+            error
+        ) << "Maximum solver attempts reached - possible configuration error";
         return false;
     }
 
@@ -223,10 +212,10 @@ bool KalmanFilterBLAS::solveLinearSystem(
 bool KalmanFilterBLAS::computeKalmanGain(
     const MatrixXd& H,
     const MatrixXd& P,
-    MatrixXd& Q,
-    MatrixXd& K,
-    MatrixXd* Qinv,
-    E_Inverter inverter
+    MatrixXd&       Q,
+    MatrixXd&       K,
+    MatrixXd*       Qinv,
+    E_Inverter      inverter
 )
 {
     int numH = H.rows();
@@ -277,12 +266,12 @@ void KalmanFilterBLAS::updateStateVector(
     const VectorXd& x,
     const MatrixXd& K,
     const VectorXd& v,
-    VectorXd& xp,
-    VectorXd& dx,
-    int begX,
-    int numX,
-    int begH,
-    int numH
+    VectorXd&       xp,
+    VectorXd&       dx,
+    int             begX,
+    int             numX,
+    int             begH,
+    int             numH
 )
 {
     // Extract subvectors
@@ -316,7 +305,7 @@ void KalmanFilterBLAS::updateCovarianceStandard(
     const MatrixXd& K,
     const MatrixXd& H,
     const MatrixXd& HP,
-    MatrixXd& Pp
+    MatrixXd&       Pp
 )
 {
     int numX = P.rows();
@@ -337,17 +326,17 @@ void KalmanFilterBLAS::updateCovarianceStandard(
         LapackWrapper::CblasColMajor,
         LapackWrapper::CblasNoTrans,
         LapackWrapper::CblasNoTrans,
-        numX,           // Rows of K (and KHP)
-        numX,           // Cols of HP (and KHP)
-        numH,           // Cols of K / rows of HP
-        1.0,            // alpha
-        K.data(),       // Matrix K
-        K.rows(),       // Leading dimension of K
-        HP.data(),      // Matrix HP
-        HP.rows(),      // Leading dimension of HP
-        0.0,            // beta
-        KHP.data(),     // Output matrix KHP
-        KHP.rows()      // Leading dimension of KHP
+        numX,        // Rows of K (and KHP)
+        numX,        // Cols of HP (and KHP)
+        numH,        // Cols of K / rows of HP
+        1.0,         // alpha
+        K.data(),    // Matrix K
+        K.rows(),    // Leading dimension of K
+        HP.data(),   // Matrix HP
+        HP.rows(),   // Leading dimension of HP
+        0.0,         // beta
+        KHP.data(),  // Output matrix KHP
+        KHP.rows()   // Leading dimension of KHP
     );
 
     // Step 3: Pp = Pp - KHP = P - K*H*P
@@ -363,7 +352,7 @@ void KalmanFilterBLAS::updateCovarianceJoseph(
     const MatrixXd& K,
     const MatrixXd& H,
     const MatrixXd& R,
-    MatrixXd& Pp
+    MatrixXd&       Pp
 )
 {
     int numX = P.rows();
@@ -381,17 +370,17 @@ void KalmanFilterBLAS::updateCovarianceJoseph(
         LapackWrapper::CblasColMajor,
         LapackWrapper::CblasNoTrans,
         LapackWrapper::CblasNoTrans,
-        numX,           // Rows of K (and IKH)
-        numX,           // Cols of H (and IKH)
-        numH,           // Cols of K / rows of H
-        -1.0,           // alpha = -1 (subtract)
-        K.data(),       // Matrix K
-        K.rows(),       // Leading dimension of K
-        H.data(),       // Matrix H
-        H.rows(),       // Leading dimension of H
-        1.0,            // beta = 1 (add to identity)
-        IKH.data(),     // Output matrix IKH
-        IKH.rows()      // Leading dimension of IKH
+        numX,        // Rows of K (and IKH)
+        numX,        // Cols of H (and IKH)
+        numH,        // Cols of K / rows of H
+        -1.0,        // alpha = -1 (subtract)
+        K.data(),    // Matrix K
+        K.rows(),    // Leading dimension of K
+        H.data(),    // Matrix H
+        H.rows(),    // Leading dimension of H
+        1.0,         // beta = 1 (add to identity)
+        IKH.data(),  // Output matrix IKH
+        IKH.rows()   // Leading dimension of IKH
     );
 
     // Step 2: Compute temp = IKH * P
@@ -400,17 +389,17 @@ void KalmanFilterBLAS::updateCovarianceJoseph(
         LapackWrapper::CblasColMajor,
         LapackWrapper::CblasNoTrans,
         LapackWrapper::CblasNoTrans,
-        numX,           // Rows
-        numX,           // Cols
-        numX,           // Inner dimension
-        1.0,            // alpha
-        IKH.data(),     // Matrix IKH
-        IKH.rows(),     // Leading dimension
-        P.data(),       // Matrix P
-        P.rows(),       // Leading dimension
-        0.0,            // beta
-        temp.data(),    // Output
-        temp.rows()     // Leading dimension
+        numX,         // Rows
+        numX,         // Cols
+        numX,         // Inner dimension
+        1.0,          // alpha
+        IKH.data(),   // Matrix IKH
+        IKH.rows(),   // Leading dimension
+        P.data(),     // Matrix P
+        P.rows(),     // Leading dimension
+        0.0,          // beta
+        temp.data(),  // Output
+        temp.rows()   // Leading dimension
     );
 
     // Step 3: Compute Pp = temp * IKH' = IKH * P * IKH'
@@ -418,17 +407,17 @@ void KalmanFilterBLAS::updateCovarianceJoseph(
         LapackWrapper::CblasColMajor,
         LapackWrapper::CblasNoTrans,
         LapackWrapper::CblasTrans,
-        numX,           // Rows
-        numX,           // Cols
-        numX,           // Inner dimension
-        1.0,            // alpha
-        temp.data(),    // Matrix temp
-        temp.rows(),    // Leading dimension
-        IKH.data(),     // Matrix IKH (will be transposed)
-        IKH.rows(),     // Leading dimension
-        0.0,            // beta
-        Pp.data(),      // Output
-        Pp.rows()       // Leading dimension
+        numX,         // Rows
+        numX,         // Cols
+        numX,         // Inner dimension
+        1.0,          // alpha
+        temp.data(),  // Matrix temp
+        temp.rows(),  // Leading dimension
+        IKH.data(),   // Matrix IKH (will be transposed)
+        IKH.rows(),   // Leading dimension
+        0.0,          // beta
+        Pp.data(),    // Output
+        Pp.rows()     // Leading dimension
     );
 
     // Step 4: Add K*R*K' term
@@ -438,17 +427,17 @@ void KalmanFilterBLAS::updateCovarianceJoseph(
         LapackWrapper::CblasColMajor,
         LapackWrapper::CblasNoTrans,
         LapackWrapper::CblasNoTrans,
-        numX,           // Rows of K
-        numH,           // Cols of R
-        numH,           // Cols of K / rows of R
-        1.0,            // alpha
-        K.data(),       // Matrix K
-        K.rows(),       // Leading dimension
-        R.data(),       // Matrix R
-        R.rows(),       // Leading dimension
-        0.0,            // beta
-        temp2.data(),   // Output
-        temp2.rows()    // Leading dimension
+        numX,          // Rows of K
+        numH,          // Cols of R
+        numH,          // Cols of K / rows of R
+        1.0,           // alpha
+        K.data(),      // Matrix K
+        K.rows(),      // Leading dimension
+        R.data(),      // Matrix R
+        R.rows(),      // Leading dimension
+        0.0,           // beta
+        temp2.data(),  // Output
+        temp2.rows()   // Leading dimension
     );
 
     // Pp += temp2 * K' = Pp + K*R*K'
@@ -456,17 +445,17 @@ void KalmanFilterBLAS::updateCovarianceJoseph(
         LapackWrapper::CblasColMajor,
         LapackWrapper::CblasNoTrans,
         LapackWrapper::CblasTrans,
-        numX,           // Rows
-        numX,           // Cols
-        numH,           // Inner dimension
-        1.0,            // alpha
-        temp2.data(),   // Matrix temp2
-        temp2.rows(),   // Leading dimension
-        K.data(),       // Matrix K (will be transposed)
-        K.rows(),       // Leading dimension
-        1.0,            // beta = 1 (accumulate)
-        Pp.data(),      // Output
-        Pp.rows()       // Leading dimension
+        numX,          // Rows
+        numX,          // Cols
+        numH,          // Inner dimension
+        1.0,           // alpha
+        temp2.data(),  // Matrix temp2
+        temp2.rows(),  // Leading dimension
+        K.data(),      // Matrix K (will be transposed)
+        K.rows(),      // Leading dimension
+        1.0,           // beta = 1 (accumulate)
+        Pp.data(),     // Output
+        Pp.rows()      // Leading dimension
     );
 
     // Symmetrize for numerical stability
@@ -483,8 +472,8 @@ void KalmanFilterBLAS::symmetrizeMatrix(MatrixXd& A)
         for (int j = i + 1; j < n; j++)
         {
             double avg = (A(i, j) + A(j, i)) / 2.0;
-            A(i, j) = avg;
-            A(j, i) = avg;
+            A(i, j)    = avg;
+            A(j, i)    = avg;
         }
     }
 }

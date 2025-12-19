@@ -12,7 +12,6 @@ using std::vector;
 struct GTime;
 struct KFState;
 struct ReceiverMap;
-class E_Source;
 
 void outputClocks(
     string           filename,

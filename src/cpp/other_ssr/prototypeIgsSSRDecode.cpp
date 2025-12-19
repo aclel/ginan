@@ -229,8 +229,15 @@ void updateNavSSR()
                 entry.slop = 0;
                 entry.slpv = 0;
 
+                updateRefTime(entry);
                 pushBiasEntry(id, entry);
-                tracepdeex(IGSSSRTRCLVL, std::cout, "%s %9.4f; ", code._to_string(), biasSSR.bias);
+                tracepdeex(
+                    IGSSSRTRCLVL,
+                    std::cout,
+                    "%s %9.4f; ",
+                    enum_to_string(code),
+                    biasSSR.bias
+                );
             }
 
             if (ssr.ssrCodeBias_map.find(ssrBlock.ssrCodeBias.t0) == ssr.ssrCodeBias_map.end())
@@ -266,8 +273,15 @@ void updateNavSSR()
                 entry.slop = 0;
                 entry.slpv = 0;
 
+                updateRefTime(entry);
                 pushBiasEntry(id, entry);
-                tracepdeex(IGSSSRTRCLVL, std::cout, "%s %9.4f; ", code._to_string(), biasSSR.bias);
+                tracepdeex(
+                    IGSSSRTRCLVL,
+                    std::cout,
+                    "%s %9.4f; ",
+                    enum_to_string(code),
+                    biasSSR.bias
+                );
             }
 
             if (ssr.ssrPhasBias_map.find(ssrBlock.ssrPhasBias.t0) == ssr.ssrPhasBias_map.end())
@@ -703,7 +717,7 @@ E_ReturnType decodeigsSSR(vector<unsigned char>& data, GTime now)
         return E_ReturnType::WAIT;
 
     int           stype   = getbitu(data, 15, 8);
-    IgsSSRSubtype subType = IgsSSRSubtype::_from_integral(stype);
+    IgsSSRSubtype subType = int_to_enum<IgsSSRSubtype>(stype);
 
     E_Sys         sys;
     IgsSSRSubtype group = IGS_SSR_group(subType, sys);

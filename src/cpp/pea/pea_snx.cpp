@@ -165,7 +165,8 @@ void sinexPerEpochPerStation(Trace& trace, GTime time, Receiver& rec)
     {
         rec.failureEccentricity = true;
 
-        BOOST_LOG_TRIVIAL(error
+        BOOST_LOG_TRIVIAL(
+            error
         ) << "Receiver eccentricity referency system != UNE";  // todo aaron, this needs
                                                                // duplication elsewhere, rs
                                                                // unchecked

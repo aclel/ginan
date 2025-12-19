@@ -56,7 +56,15 @@ void cullEphMap(GTime time, TYPE& map)
         }
 
         for (auto& [navtyp, navMap] : satEphMap)
-            for (auto it = navMap.begin(); it != navMap.end();)
+        {
+            if (navMap.empty())
+            {
+                continue;
+            }
+
+            for (auto it =
+                     std::next(navMap.begin());  // Always reserve the latest entry when culling
+                 it != navMap.end();)
             {
                 auto& [ephtime, eph] = *it;
 
@@ -69,6 +77,7 @@ void cullEphMap(GTime time, TYPE& map)
                     ++it;
                 }
             }
+        }
     }
 }
 
@@ -109,7 +118,8 @@ bool satclk(
 
         switch (ephType)
         {
-            case E_Source::SSR:  // fallthrough
+            case E_Source::SSR:   // fallthrough
+            case E_Source::SBAS:  // fallthrough
             case E_Source::BROADCAST:
                 returnValue = satClkBroadcast(trace, time, teph, satPos, nav);
                 break;
@@ -134,7 +144,7 @@ bool satclk(
         satPos.clkSource   = ephType;
         satPos.ephClkValid = true;
 
-        if (acsConfig.check_broadcast_differences && ephType != +E_Source::BROADCAST)
+        if (acsConfig.check_broadcast_differences && ephType != E_Source::BROADCAST)
         {
             SatPos copy = satPos;
 
@@ -180,7 +190,7 @@ bool satpos(
             __FUNCTION__,
             time.to_string().c_str(),
             satPos.Sat.id().c_str(),
-            ephType._to_string(),
+            enum_to_string(ephType),
             offsetType
         );
 
@@ -189,6 +199,9 @@ bool satpos(
             {
                 case E_Source::BROADCAST:
                     returnValue = satPosBroadcast(trace, time, teph, satPos, nav);
+                    break;
+                case E_Source::SBAS:
+                    returnValue = satPosSBAS(trace, time, teph, satPos, nav);
                     break;
                 case E_Source::SSR:
                     returnValue = satPosSSR(trace, time, teph, satPos, nav);
@@ -218,6 +231,9 @@ bool satpos(
             case E_Source::BROADCAST:
                 satPos.rSatCom = satPos.rSatApc;
                 break;
+            case E_Source::SBAS:
+                satPos.rSatCom = satPos.rSatApc;
+                break;
             case E_Source::SSR:
                 satPos.rSatApc = satPos.rSatCom;
                 break;
@@ -232,7 +248,7 @@ bool satpos(
                 break;
         }
 
-        if (acsConfig.check_broadcast_differences && ephType != +E_Source::BROADCAST)
+        if (acsConfig.check_broadcast_differences && ephType != E_Source::BROADCAST)
         {
             SatPos copy  = satPos;
             bool   pass  = satPosBroadcast(trace, time, teph, copy, nav);
@@ -250,7 +266,7 @@ bool satpos(
         satPos.posSource   = ephType;
         satPos.ephPosValid = true;
 
-        if (ephType == +E_Source::SSR)
+        if (ephType == E_Source::SSR)
         {
             satPos.clkSource   = ephType;
             satPos.ephClkValid = true;
@@ -259,23 +275,25 @@ bool satpos(
         break;
     }
 
-    if (satPos.posSource == +E_Source::SSR &&
-        acsConfig.ssr_input_antenna_offset == +E_OffsetType::UNSPECIFIED)
+    if (satPos.posSource == E_Source::SSR &&
+        acsConfig.ssr_input_antenna_offset == E_OffsetType::UNSPECIFIED)
         BOOST_LOG_TRIVIAL(error) << "ssr_antenna_offset has not been set in config.\n";
 
-    if (satPos.posSource == +E_Source::SSR && offsetType == +E_OffsetType::APC &&
-        acsConfig.ssr_input_antenna_offset == +E_OffsetType::COM)
+    if (satPos.posSource == E_Source::SSR && offsetType == E_OffsetType::APC &&
+        acsConfig.ssr_input_antenna_offset == E_OffsetType::COM)
         antennaScalar = +1;
-    if (satPos.posSource == +E_Source::SSR && offsetType == +E_OffsetType::COM &&
-        acsConfig.ssr_input_antenna_offset == +E_OffsetType::APC)
+    if (satPos.posSource == E_Source::SSR && offsetType == E_OffsetType::COM &&
+        acsConfig.ssr_input_antenna_offset == E_OffsetType::APC)
         antennaScalar = -1;
-    if (satPos.posSource == +E_Source::PRECISE && offsetType == +E_OffsetType::APC)
+    if (satPos.posSource == E_Source::PRECISE && offsetType == E_OffsetType::APC)
         antennaScalar = +1;
-    if (satPos.posSource == +E_Source::KALMAN && offsetType == +E_OffsetType::APC)
+    if (satPos.posSource == E_Source::KALMAN && offsetType == E_OffsetType::APC)
         antennaScalar = +1;
-    if (satPos.posSource == +E_Source::REMOTE && offsetType == +E_OffsetType::APC)
+    if (satPos.posSource == E_Source::REMOTE && offsetType == E_OffsetType::APC)
         antennaScalar = +1;
-    if (satPos.posSource == +E_Source::BROADCAST && offsetType == +E_OffsetType::COM)
+    if (satPos.posSource == E_Source::BROADCAST && offsetType == E_OffsetType::COM)
+        antennaScalar = -1;
+    if (satPos.posSource == E_Source::SBAS && offsetType == E_OffsetType::COM)
         antennaScalar = -1;
 
     // satellite antenna offset correction
@@ -338,7 +356,7 @@ void adjustRelativity(SatPos& satPos, E_Relativity applyRelativity)
 {
     E_Relativity clockHasRelativity;
 
-    if (satPos.clkSource == +E_Source::BROADCAST && satPos.Sat.sys == +E_Sys::GLO)
+    if (satPos.clkSource == E_Source::BROADCAST && satPos.Sat.sys == E_Sys::GLO)
         clockHasRelativity = E_Relativity::ON;  // Ref: RTCM STANDARD 10403.3
     else
         clockHasRelativity = E_Relativity::OFF;
@@ -350,9 +368,9 @@ void adjustRelativity(SatPos& satPos, E_Relativity applyRelativity)
 
     double scalar = 0;
 
-    if (clockHasRelativity == +E_Relativity::ON && applyRelativity == +E_Relativity::OFF)
+    if (clockHasRelativity == E_Relativity::ON && applyRelativity == E_Relativity::OFF)
         scalar = -1;
-    else if (clockHasRelativity == +E_Relativity::OFF && applyRelativity == +E_Relativity::ON)
+    else if (clockHasRelativity == E_Relativity::OFF && applyRelativity == E_Relativity::ON)
         scalar = +1;
 
     satPos.satClk -= scalar * relativity1(satPos.rSatCom, satPos.satVel);
@@ -447,7 +465,6 @@ bool satPosClk(
     );
 
     time -= obs.satClk;  // Eugene: what if using ssr?
-
     // satellite position and clock at transmission time
     pass = satpos(trace, time, teph, obs, posSources, offsetType, nav, kfState_ptr, remote_ptr);
 
@@ -484,9 +501,9 @@ bool satPosClk(
         obs.posVar,
         obs.satClkVar * SQR(CLIGHT),
         obs.ephPosValid,
-        obs.posSource._to_string(),
+        enum_to_string(obs.posSource).c_str(),
         obs.ephClkValid,
-        obs.clkSource._to_string()
+        enum_to_string(obs.clkSource).c_str()
     );
 
     return true;

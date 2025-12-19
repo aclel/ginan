@@ -13,7 +13,7 @@ class loading
    public:
     loading();
     loading(std::string);
-    ~loading(){};
+    ~loading() {};
     void   set_name(std::string name);
     void   read();
     double interpolate_gz(double);

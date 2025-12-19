@@ -166,14 +166,14 @@ void mongoTestStat(KFState& kfState, TestStatistics& testStatistics)
 
     for (auto instance : instances)
     {
-        auto mongo_ptr = mongo_ptr_arr[instance];
+        auto mongo_ptr = mongo_ptr_arr[static_cast<size_t>(instance)];
 
         if (mongo_ptr == nullptr)
             continue;
 
         auto& mongo = *mongo_ptr;
 
-        auto& config = acsConfig.mongoOpts[instance];
+        auto& config = acsConfig.mongoOpts[static_cast<size_t>(instance)];
 
         getMongoCollection(mongo, Constants::Mongo::STATES_DB);
 
@@ -227,7 +227,7 @@ void mongoTrace(const vector<string>& jsons, bool queue)
 
     for (auto instance : instances)
     {
-        auto mongo_ptr = mongo_ptr_arr[instance];
+        auto mongo_ptr = mongo_ptr_arr[static_cast<size_t>(instance)];
 
         if (mongo_ptr == nullptr)
             continue;
@@ -261,7 +261,7 @@ void mongoOutputConfig(string& config)
 
     for (auto instance : instances)
     {
-        auto mongo_ptr = mongo_ptr_arr[instance];
+        auto mongo_ptr = mongo_ptr_arr[static_cast<size_t>(instance)];
 
         if (mongo_ptr == nullptr)
             continue;
@@ -301,14 +301,14 @@ void mongoMeasSatStat(ReceiverMap& receiverMap)
 
     for (auto instance : instances)
     {
-        auto mongo_ptr = mongo_ptr_arr[instance];
+        auto mongo_ptr = mongo_ptr_arr[static_cast<size_t>(instance)];
 
         if (mongo_ptr == nullptr)
             continue;
 
         auto& mongo = *mongo_ptr;
 
-        auto& config = acsConfig.mongoOpts[instance];
+        auto& config = acsConfig.mongoOpts[static_cast<size_t>(instance)];
 
         getMongoCollection(mongo, Constants::Mongo::GEOMETRY_DB);
 
@@ -392,14 +392,14 @@ void mongoMeasResiduals(
 
     for (auto instance : instances)
     {
-        auto mongo_ptr = mongo_ptr_arr[instance];
+        auto mongo_ptr = mongo_ptr_arr[static_cast<size_t>(instance)];
 
         if (mongo_ptr == nullptr)
             continue;
 
         auto& mongo = *mongo_ptr;
 
-        auto& config = acsConfig.mongoOpts[instance];
+        auto& config = acsConfig.mongoOpts[static_cast<size_t>(instance)];
 
         getMongoCollection(mongo, Constants::Mongo::MEASUREMENTS_DB);
 
@@ -468,7 +468,9 @@ void mongoMeasResiduals(
                 indexLabel[name + "-Postfit"] = true;
                 indexLabel[name + "-Sigma"]   = true;
 
-                if ((instance & acsConfig.mongoOpts.output_components) == +E_Mongo::NONE ||
+                if ((static_cast<int>(instance) &
+                     static_cast<int>(acsConfig.mongoOpts.output_components)) ==
+                        static_cast<int>(E_Mongo::NONE) ||
                     kfMeas.componentsMaps.empty())
                 {
                     continue;
@@ -482,15 +484,14 @@ void mongoMeasResiduals(
                 {
                     auto& [value, desc, var] = details;
 
-                    string label = name + " " +
-                                   KF::_from_integral_unchecked(obsKey.type)._to_string() + " " +
-                                   component._to_string();
+                    string label =
+                        name + " " + enum_to_string(obsKey.type) + " " + enum_to_string(component);
 
                     doc << label << value;
 
                     indexLabel[label] = true;
 
-                    if (acsConfig.mongoOpts.output_cumulative == +E_Mongo::NONE)
+                    if (acsConfig.mongoOpts.output_cumulative == E_Mongo::NONE)
                     {
                         continue;
                     }
@@ -498,13 +499,13 @@ void mongoMeasResiduals(
                     cumulative += value;
 
                     string resLabel;
-                    if (component._to_integral() >= 10)
-                        resLabel = (string) "RES-" + std::to_string(component._to_integral());
+                    if (static_cast<int>(component) >= 10)
+                        resLabel = (string) "RES-" + std::to_string(static_cast<int>(component));
                     else
-                        resLabel = (string) "RES-0" + std::to_string(component._to_integral());
+                        resLabel = (string) "RES-0" + std::to_string(static_cast<int>(component));
 
-                    label = name + " " + KF::_from_integral_unchecked(obsKey.type)._to_string() +
-                            "_" + resLabel + " " + component._to_string();
+                    label = name + " " + enum_to_string(obsKey.type) + "_" + resLabel + " " +
+                            enum_to_string(component);
 
                     doc << label << cumulative;
 
@@ -584,13 +585,13 @@ void mongoStatesAvailable(GTime time, MongoStatesOptions opts)
 
     for (auto instance : instances)
     {
-        Mongo* mongo_ptr = mongo_ptr_arr[instance];
+        Mongo* mongo_ptr = mongo_ptr_arr[static_cast<size_t>(instance)];
 
         if (mongo_ptr == nullptr)
             continue;
 
         auto& mongo  = *mongo_ptr;
-        auto& config = acsConfig.mongoOpts[instance];
+        auto& config = acsConfig.mongoOpts[static_cast<size_t>(instance)];
 
         auto                 c      = mongo.pool.acquire();
         mongocxx::client&    client = *c;
@@ -630,14 +631,14 @@ void mongoStates(KFState& kfState, MongoStatesOptions opts)
 
     for (auto instance : instances)
     {
-        auto mongo_ptr = mongo_ptr_arr[instance];
+        auto mongo_ptr = mongo_ptr_arr[static_cast<size_t>(instance)];
 
         if (mongo_ptr == nullptr)
             continue;
 
         auto& mongo = *mongo_ptr;
 
-        auto& config = acsConfig.mongoOpts[instance];
+        auto& config = acsConfig.mongoOpts[static_cast<size_t>(instance)];
 
         getMongoCollection(mongo, opts.collection);
 
@@ -660,8 +661,7 @@ void mongoStates(KFState& kfState, MongoStatesOptions opts)
                 continue;
             }
 
-            lookup[{key.str, key.Sat.id(), KF::_from_integral_unchecked(key.type)._to_string()}]
-                .push_back({index, key.num});
+            lookup[{key.str, key.Sat.id(), enum_to_string(key.type)}].push_back({index, key.num});
         }
 
         vector<bsoncxx::document::value> documents;
@@ -724,7 +724,8 @@ void mongoStates(KFState& kfState, MongoStatesOptions opts)
                 array_builder << num;
             array_builder << close_array;
 
-            if (instance & acsConfig.mongoOpts.output_state_covars)
+            if (static_cast<int>(instance) &
+                static_cast<int>(acsConfig.mongoOpts.output_state_covars))
             {
                 array_builder = doc << toString(Constants::Mongo::COVAR_VAR) << open_array;
                 for (auto& [i, numI] : index)
@@ -799,14 +800,14 @@ void mongoCull(GTime time)
 
     for (auto instance : instances)
     {
-        Mongo* mongo_ptr = mongo_ptr_arr[instance];
+        Mongo* mongo_ptr = mongo_ptr_arr[static_cast<size_t>(instance)];
 
         if (mongo_ptr == nullptr)
             continue;
 
         auto& mongo = *mongo_ptr;
 
-        auto& config = acsConfig.mongoOpts[instance];
+        auto& config = acsConfig.mongoOpts[static_cast<size_t>(instance)];
 
         for (auto collection : {SSR_DB, REMOTE_DATA_DB})
         {
@@ -909,7 +910,7 @@ void mongoOutput(
 
     for (auto instance : instances)
     {
-        Mongo* mongo_ptr = mongo_ptr_arr[instance];
+        Mongo* mongo_ptr = mongo_ptr_arr[static_cast<size_t>(instance)];
 
         if (mongo_ptr == nullptr)
             continue;
@@ -976,9 +977,9 @@ void prepareSsrStates(
     time.bigTime =
         (long int)(time.bigTime + 0.5);  // time tags in mongo will be rounded up to whole sec
 
-    for (E_Sys sys : E_Sys::_values())
+    for (E_Sys sys : magic_enum::enum_values<E_Sys>())
     {
-        string sysName = boost::algorithm::to_lower_copy((string)sys._to_string());
+        string sysName = boost::algorithm::to_lower_copy((string)enum_to_string(sys));
 
         if (acsConfig.process_sys[sys] == false)
             continue;
@@ -1124,7 +1125,7 @@ void prepareSsrStates(
                         entry.stringMap[SSR_DATA]    = {SSR_CODE_BIAS, true};
                         entry.stringMap[SSR_SAT]     = {Sat.id(), true};
                         entry.timeMap[SSR_EPOCH]     = {time, true};
-                        entry.stringMap[SSR_OBSCODE] = {obsCode._to_string(), true};
+                        entry.stringMap[SSR_OBSCODE] = {enum_to_string(obsCode), true};
 
                         entry.doubleMap[SSR_BIAS]  = {bias, false};
                         entry.doubleMap[SSR_VAR]   = {bvar, false};
@@ -1151,7 +1152,7 @@ void prepareSsrStates(
                         entry.stringMap[SSR_DATA]    = {SSR_CODE_BIAS, true};
                         entry.stringMap[SSR_SAT]     = {Sat.id(), true};
                         entry.timeMap[SSR_EPOCH]     = {ssrCodeBias.t0, true};
-                        entry.stringMap[SSR_OBSCODE] = {obsCode._to_string(), true};
+                        entry.stringMap[SSR_OBSCODE] = {enum_to_string(obsCode), true};
 
                         entry.doubleMap[SSR_BIAS]  = {biasVar.bias, false};
                         entry.doubleMap[SSR_VAR]   = {biasVar.var, false};
@@ -1191,7 +1192,7 @@ void prepareSsrStates(
                         entry.stringMap[SSR_DATA]    = {SSR_CODE_BIAS, true};
                         entry.stringMap[SSR_SAT]     = {Sat.id(), true};
                         entry.timeMap[SSR_EPOCH]     = {time, true};
-                        entry.stringMap[SSR_OBSCODE] = {obsCode._to_string(), true};
+                        entry.stringMap[SSR_OBSCODE] = {enum_to_string(obsCode), true};
 
                         entry.doubleMap[SSR_BIAS]  = {bias, false};
                         entry.doubleMap[SSR_VAR]   = {bvar, false};
@@ -1223,7 +1224,7 @@ void prepareSsrStates(
                         entry.stringMap[SSR_DATA]    = {SSR_PHAS_BIAS, true};
                         entry.stringMap[SSR_SAT]     = {Sat.id(), true};
                         entry.timeMap[SSR_EPOCH]     = {time, true};
-                        entry.stringMap[SSR_OBSCODE] = {obsCode._to_string(), true};
+                        entry.stringMap[SSR_OBSCODE] = {enum_to_string(obsCode), true};
 
                         entry.doubleMap[SSR_BIAS]  = {bias, false};
                         entry.doubleMap[SSR_VAR]   = {bvar, false};
@@ -1264,7 +1265,7 @@ void prepareSsrStates(
                         entry.stringMap[SSR_DATA]    = {SSR_PHAS_BIAS, true};
                         entry.stringMap[SSR_SAT]     = {Sat.id(), true};
                         entry.timeMap[SSR_EPOCH]     = {ssrPhasBias.t0, true};
-                        entry.stringMap[SSR_OBSCODE] = {obsCode._to_string(), true};
+                        entry.stringMap[SSR_OBSCODE] = {enum_to_string(obsCode), true};
 
                         entry.doubleMap[SSR_BIAS]  = {biasVar.bias, false};
                         entry.doubleMap[SSR_VAR]   = {biasVar.var, false};
@@ -1315,7 +1316,7 @@ void prepareSsrStates(
                             entry.stringMap[SSR_DATA]    = {SSR_PHAS_BIAS, true};
                             entry.stringMap[SSR_SAT]     = {Sat.id(), true};
                             entry.timeMap[SSR_EPOCH]     = {time, true};
-                            entry.stringMap[SSR_OBSCODE] = {obsCode._to_string(), true};
+                            entry.stringMap[SSR_OBSCODE] = {enum_to_string(obsCode), true};
 
                             entry.doubleMap[SSR_BIAS]  = {bias, false};
                             entry.doubleMap[SSR_VAR]   = {bvar, false};
@@ -1377,13 +1378,14 @@ void prepareSsrStates(
                         DBEntry entry;
                         entry.stringMap[SSR_DATA] = {IGS_ION_ENTRY, true};
                         entry.timeMap[SSR_EPOCH]  = {atmGlob.time, true};
-                        entry.intMap[SSR_ION_IND] = {nbasis++, true};
+                        entry.intMap[SSR_ION_IND] = std::make_tuple(nbasis++, true);
 
-                        entry.intMap[IGS_ION_HGT]    = {basdata.layer, false};
-                        entry.intMap[IGS_ION_DEG]    = {basdata.degree, false};
-                        entry.intMap[IGS_ION_ORD]    = {basdata.order, false};
-                        entry.intMap[IGS_ION_PAR]    = {basdata.trigType, false};
-                        entry.doubleMap[IGS_ION_VAL] = {basdata.value, false};
+                        entry.intMap[IGS_ION_HGT] = std::make_tuple(basdata.layer, false);
+                        entry.intMap[IGS_ION_DEG] = std::make_tuple(basdata.degree, false);
+                        entry.intMap[IGS_ION_ORD] = std::make_tuple(basdata.order, false);
+                        entry.intMap[IGS_ION_PAR] =
+                            std::make_tuple(static_cast<int>(basdata.trigType), false);
+                        entry.doubleMap[IGS_ION_VAL] = std::make_tuple(basdata.value, false);
 
                         dbEntryList.push_back(entry);
                     }
@@ -1579,14 +1581,14 @@ void mongoEditing(
 
     for (auto instance : instances)
     {
-        auto mongo_ptr = mongo_ptr_arr[instance];
+        auto mongo_ptr = mongo_ptr_arr[static_cast<size_t>(instance)];
 
         if (mongo_ptr == nullptr)
             continue;
 
         auto& mongo = *mongo_ptr;
 
-        auto& config = acsConfig.mongoOpts[instance];
+        auto& config = acsConfig.mongoOpts[static_cast<size_t>(instance)];
 
         getMongoCollection(mongo, toString(Constants::Mongo::EDITING_DB));
 
@@ -1624,14 +1626,14 @@ void mongoEditing(
 
     for (auto instance : instances)
     {
-        auto mongo_ptr = mongo_ptr_arr[instance];
+        auto mongo_ptr = mongo_ptr_arr[static_cast<size_t>(instance)];
 
         if (mongo_ptr == nullptr)
             continue;
 
         auto& mongo = *mongo_ptr;
 
-        auto& config = acsConfig.mongoOpts[instance];
+        auto& config = acsConfig.mongoOpts[static_cast<size_t>(instance)];
 
         getMongoCollection(mongo, toString(Constants::Mongo::EDITING_DB));
 

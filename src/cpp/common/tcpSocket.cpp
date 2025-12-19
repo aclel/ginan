@@ -3,16 +3,14 @@
 // #define BSONCXX_POLY_USE_SYSTEM_MNMLSTC
 
 #include "common/tcpSocket.hpp"
+#include <boost/json.hpp>
 #include <boost/system/error_code.hpp>
-#include <bsoncxx/builder/basic/document.hpp>
-#include <bsoncxx/json.hpp>
 #include <chrono>
 #include "common/acsConfig.hpp"
 #include "common/streamNtrip.hpp"
 
 namespace bp = boost::asio::placeholders;
 
-using bsoncxx::builder::basic::kvp;
 using std::chrono::system_clock;
 
 B_asio::io_context TcpSocket::ioContext;
@@ -587,15 +585,15 @@ void TcpSocket::connectionError(const boost::system::error_code& err, string ope
 
     GTime time = timeGet();
 
-    bsoncxx::builder::basic::document doc = {};
-    doc.append(kvp("label", "connectionError"));
-    doc.append(kvp("Stream", url.path.substr(1, url.path.length())));
-    doc.append(kvp("Time", time.to_string()));
-    doc.append(kvp("BoostSysErrCode", err.value()));
-    doc.append(kvp("BoostSysErrMess", err.message()));
-    doc.append(kvp("SocketOperation", operation));
+    boost::json::object doc = {};
+    doc["label"]            = "connectionError";
+    doc["Stream"]           = url.path.substr(1, url.path.length());
+    doc["Time"]             = time.to_string();
+    doc["BoostSysErrCode"]  = err.value();
+    doc["BoostSysErrMess"]  = err.message();
+    doc["SocketOperation"]  = operation;
 
-    logStream << bsoncxx::to_json(doc) << "\n";
+    logStream << boost::json::serialize(doc) << "\n";
 }
 
 void NtripStream::serverResponse(unsigned int statusCode, string httpVersion)
@@ -613,12 +611,12 @@ void NtripStream::serverResponse(unsigned int statusCode, string httpVersion)
 
     GTime time = timeGet();
 
-    bsoncxx::builder::basic::document doc = {};
-    doc.append(kvp("label", __FUNCTION__));
-    doc.append(kvp("Stream", url.path.substr(1, url.path.length())));
-    doc.append(kvp("Time", time.to_string()));
-    doc.append(kvp("ServerStatus", (int)statusCode));
-    doc.append(kvp("VersionHTTP", httpVersion));
+    boost::json::object doc = {};
+    doc["label"]            = __FUNCTION__;
+    doc["Stream"]           = url.path.substr(1, url.path.length());
+    doc["Time"]             = time.to_string();
+    doc["ServerStatus"]     = (int)statusCode;
+    doc["VersionHTTP"]      = httpVersion;
 
-    logStream << bsoncxx::to_json(doc) << "\n";
+    logStream << boost::json::serialize(doc) << "\n";
 }

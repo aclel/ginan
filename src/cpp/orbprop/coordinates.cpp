@@ -100,8 +100,8 @@ void eci2ecef(
     Matrix<double, 3, 3, Eigen::RowMajor> RC2I;
     Matrix<double, 3, 3, Eigen::RowMajor> RPOM;
 
-    iauC2ixys(X_iau, Y_iau, S_iau, (double(*)[3]) & RC2I(0, 0));
-    iauPom00(xp_, yp_, sp, (double(*)[3]) & RPOM(0, 0));
+    iauC2ixys(X_iau, Y_iau, S_iau, (double (*)[3]) & RC2I(0, 0));
+    iauPom00(xp_, yp_, sp, (double (*)[3]) & RPOM(0, 0));
 
     U = RPOM * theta * RC2I;
 

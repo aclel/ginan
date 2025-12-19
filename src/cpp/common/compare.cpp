@@ -268,7 +268,7 @@ void compareOrbits(vector<string> files)
                 0,
                 trace,
                 "^ %-10s %-3s averaged %+12.4e %-5s with std %12.4e over %d epochs\n",
-                KF::_from_integral(key.type)._to_string(),
+                enum_to_string(key.type).c_str(),
                 key.code().c_str(),
                 avg,
                 key.comment.c_str(),

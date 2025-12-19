@@ -145,11 +145,11 @@ bool readBlq(
 
     vector<E_TidalConstituent> waveList;
 
-    if (type == +E_LoadingType::OCEAN)
+    if (type == E_LoadingType::OCEAN)
     {
         waveList = acsConfig.otl_blq_col_order;
     }
-    else if (type == +E_LoadingType::ATMOSPHERIC)
+    else if (type == E_LoadingType::ATMOSPHERIC)
     {
         waveList = acsConfig.atl_blq_col_order;
     }
@@ -176,7 +176,7 @@ bool readBlq(
                 try
                 {
                     E_TidalConstituent constituent =
-                        E_TidalConstituent::_from_string(waveName.c_str());
+                        string_to_enum<E_TidalConstituent>(waveName.c_str());
                     waveList.push_back(constituent);
                 }
                 catch (...)
@@ -206,12 +206,12 @@ bool readBlq(
         boost::to_upper(name);
 
         // read BLQ record for the station
-        if (type == +E_LoadingType::OCEAN)
+        if (type == E_LoadingType::OCEAN)
         {
             auto componentList = acsConfig.otl_blq_row_order;
             readBlqRecord(fileStream, waveList, componentList, otlDisplacementMap[name]);
         }
-        else if (type == +E_LoadingType::ATMOSPHERIC)
+        else if (type == E_LoadingType::ATMOSPHERIC)
         {
             auto componentList = acsConfig.atl_blq_row_order;
             readBlqRecord(fileStream, waveList, componentList, atlDisplacementMap[name]);

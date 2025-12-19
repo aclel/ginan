@@ -12,7 +12,8 @@ struct ObsLister
 
 struct ObsStream : StreamParser
 {
-    E_ObsWaitCode obsWaitCode = E_ObsWaitCode::OK;
+    E_ObsAgeCode obsAgeCode =
+        E_ObsAgeCode::CURRENT_OBS;  ///< Age code of observation retrieved from memory
 
     bool isPseudoRec;
 
@@ -48,22 +49,22 @@ struct ObsStream : StreamParser
                 {
                     E_Sys sys = obs.Sat.sys;
 
-                    if (sys == +E_Sys::GPS)
+                    if (sys == E_Sys::GPS)
                     {
                         double dirty_C1W_phase = 0;
                         for (auto& sig : sigsList)
                         {
-                            if (sig.code == +E_ObsCode::L1C)
+                            if (sig.code == E_ObsCode::L1C)
                                 dirty_C1W_phase = sig.L;
 
-                            if (sig.code == +E_ObsCode::L1W && sig.P == 0)
+                            if (sig.code == E_ObsCode::L1W && sig.P == 0)
                             {
                                 sig.L = 0;
                             }
                         }
 
                         for (auto& sig : sigsList)
-                            if (sig.code == +E_ObsCode::L1W && sig.L == 0 && sig.P != 0)
+                            if (sig.code == E_ObsCode::L1W && sig.L == 0 && sig.P != 0)
                             {
                                 sig.L = dirty_C1W_phase;
                                 break;
@@ -136,8 +137,16 @@ struct ObsStream : StreamParser
         return ObsList();
     }
 
-    /** Return a list of observations from the stream, with a specified timestamp.
-     * This function may be overridden by objects that use this interface
+    /** Retrieve observations with a specified timestamp from memory where observations are
+     * buffered, and update obsAgeCode according to the status of retrieved observations:
+     *     NO_OBS:      No observation at all in memory
+     *     PAST_OBS:    Closest observation time is earlier than current processing epoch without
+     *                  tolerance
+     *     CURRENT_OBS: First processing epoch, or suitable observations found for current
+     *                  processing epoch
+     *     FUTURE_OBS:  Closest observation time is later than current processing epoch
+     *                  without tolerance
+     * NOTE: This function may be overridden by objects that use this interface
      */
     ObsList getObs(
         GTime  time,        ///< Timestamp to get observations for
@@ -150,49 +159,65 @@ struct ObsStream : StreamParser
         {
             ObsList obsList = getObs();
 
-            if (time == GTime::noTime())
+            if (obsList.empty())
             {
-                foundGoodObs = true;
-                eatObs();
-                bigObsList += obsList;
+                obsAgeCode = E_ObsAgeCode::NO_OBS;
                 break;
             }
-            else if (obsList.empty())
+            else if (time == GTime::noTime())
             {
-                obsWaitCode = E_ObsWaitCode::NO_DATA_WAIT;
+                // Start epoch not given, use time of first obs as start time
+                foundGoodObs = true;
+                dropObs();
                 bigObsList += obsList;
                 break;
             }
             else if (obsList.front()->time < time - delta)
             {
-                obsWaitCode = E_ObsWaitCode::EARLY_DATA;
-                eatObs();
-                bigObsList += obsList;
-                break;
+                // Save earlier data to preprocess in case preprocess_all_data is on
+                obsAgeCode = E_ObsAgeCode::PAST_OBS;
+                dropObs();
+                if (foundGoodObs == false)
+                {
+                    // Only push past obs when good obs not found yet, i.e. drop past obs coming
+                    // late after current ones and continue to find good ones in case data is out of
+                    // order
+                    bigObsList += obsList;
+                    break;
+                }
             }
             else if (obsList.front()->time > time + delta)
             {
-                obsWaitCode = E_ObsWaitCode::NO_DATA_EVER;
+                // Future obs, do nothing and leave the data to read later
+                obsAgeCode = E_ObsAgeCode::FUTURE_OBS;
                 break;
             }
             else
             {
+                // Current obs (within epoch tolerance), continue with loop to get all current obs
                 foundGoodObs = true;
-                eatObs();
+                dropObs();
                 bigObsList += obsList;
             }
         }
 
         if (foundGoodObs)
-            obsWaitCode = E_ObsWaitCode::OK;
-        else if (obsWaitCode == +E_ObsWaitCode::NO_DATA_EVER)
+        {
+            // Future obs may have been attempted (obsAgeCode is now FUTURE_OBS) or no more
+            // obs (obsAgeCode is now NO_OBS) even good obs found, reset obsAgeCode to CURRENT_OBS
+            obsAgeCode = E_ObsAgeCode::CURRENT_OBS;
+        }
+        else if (obsAgeCode == E_ObsAgeCode::FUTURE_OBS)
+        {
             return ObsList();
+        }
+
         return bigObsList;
     }
 
-    /** Remove some observations from memory
+    /** Drop the front observation list from memory when it has been read sucessfully
      */
-    void eatObs()
+    void dropObs()
     {
         try
         {

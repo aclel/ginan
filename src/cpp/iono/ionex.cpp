@@ -102,12 +102,12 @@ void readionexdcb(std::ifstream& in, Navigation* navi)
 
             if (!refObs)
             {
-                if (Sat.sys == +E_Sys::GPS)
+                if (Sat.sys == E_Sys::GPS)
                 {
                     entry.cod1 = E_ObsCode::L1W;
                     entry.cod2 = E_ObsCode::L2W;
                 }
-                else if (Sat.sys == +E_Sys::GLO)
+                else if (Sat.sys == E_Sys::GLO)
                 {
                     entry.cod1 = E_ObsCode::L1P;
                     entry.cod2 = E_ObsCode::L2P;
@@ -147,12 +147,12 @@ void readionexdcb(std::ifstream& in, Navigation* navi)
 
             if (!refObs)
             {
-                if (Sat.sys == +E_Sys::GPS)
+                if (Sat.sys == E_Sys::GPS)
                 {
                     entry.cod1 = E_ObsCode::L1W;
                     entry.cod2 = E_ObsCode::L2W;
                 }
-                else if (Sat.sys == +E_Sys::GLO)
+                else if (Sat.sys == E_Sys::GLO)
                 {
                     entry.cod1 = E_ObsCode::L1P;
                     entry.cod2 = E_ObsCode::L2P;
@@ -188,7 +188,9 @@ void readionexdcb(std::ifstream& in, Navigation* navi)
 
         entry.name = id;
 
-        if (Sat.sys == +E_Sys::GLO && Sat.prn == 0)
+        updateRefTime(entry);
+
+        if (Sat.sys == E_Sys::GLO && Sat.prn == 0)
         {
             // this seems to be a receiver
             // for ambiguous GLO receiver bias id (i.e. PRN not specified), duplicate bias entry for
@@ -201,7 +203,7 @@ void readionexdcb(std::ifstream& in, Navigation* navi)
                 pushBiasEntry(id, entry);
             }
         }
-        else if (Sat.sys == +E_Sys::GLO && Sat.prn != 0)
+        else if (Sat.sys == E_Sys::GLO && Sat.prn != 0)
         {
             // this can be a receiver or satellite
             id = id + ":" + Sat.id();

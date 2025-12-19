@@ -2,10 +2,9 @@
 
 #include <boost/iostreams/device/array.hpp>
 #include <boost/iostreams/stream.hpp>
-#include <fcntl.h>
 #include <string>
-#include <unistd.h>
 #include <vector>
+#include "common/platformCompat.hpp"
 #include "common/streamParser.hpp"
 
 namespace B_io = boost::iostreams;
@@ -59,7 +58,11 @@ struct SerialStream : Stream
 {
     string path;
 
+#ifdef _WIN32
+    HANDLE fileDescriptor = INVALID_HANDLE_VALUE;
+#else
     int fileDescriptor = -1;
+#endif
 
     vector<char> receivedData;
 
@@ -71,7 +74,11 @@ struct SerialStream : Stream
 
     virtual void getData()
     {
+#ifdef _WIN32
+        if (fileDescriptor == INVALID_HANDLE_VALUE)
+#else
         if (fileDescriptor < 0)
+#endif
         {
             return;
         }
@@ -83,7 +90,14 @@ struct SerialStream : Stream
 
             receivedData.resize(receivedData.size() + reserve);
 
+#ifdef _WIN32
+            DWORD bytesRead = 0;
+            BOOL  success =
+                ReadFile(fileDescriptor, &receivedData[oldSize], reserve, &bytesRead, NULL);
+            int n = success ? bytesRead : 0;
+#else
             int n = read(fileDescriptor, &receivedData[oldSize], reserve);
+#endif
 
             receivedData.resize(oldSize + n);
 
@@ -103,11 +117,18 @@ struct SerialStream : Stream
 
     virtual ~SerialStream()
     {
+#ifdef _WIN32
+        if (fileDescriptor == INVALID_HANDLE_VALUE)
+        {
+            return;
+        }
+        CloseHandle(fileDescriptor);
+#else
         if (fileDescriptor < 0)
         {
             return;
         }
-
         close(fileDescriptor);
+#endif
     };
 };

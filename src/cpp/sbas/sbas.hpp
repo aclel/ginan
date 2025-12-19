@@ -7,6 +7,12 @@
 
 using std::mutex;
 
+// forward declarations
+struct Navigation;
+struct Receiver;
+struct SatSys;
+struct SatPos;
+
 struct SBASMessage
 {
     int           prn  = -1;
@@ -26,8 +32,12 @@ struct SBASFast
 struct SBASSlow
 {
     GTime    toe;
-    Vector4d dEph;
-    MatrixXd covr;
+    int      iode;
+    Vector4d dPos;
+    Vector4d ddPos;
+    GTime    trec;
+    double   Ivalid     = -1;
+    bool     pvsEnabled = false;
 };
 
 struct SBASRegn
@@ -79,13 +89,26 @@ struct SBASDegrL5
     int                     type = 0;
 };
 
+struct SBASIntg
+{
+    GTime trec;
+    int   REint;
+    bool  REBoost = false;
+
+    double   REScale;
+    MatrixXd covr;
+    double   dRcorr;
+};
+
 struct SBASMaps
 {
-    map<int, SBASFast>   fastCorr;
-    map<int, SBASSlow>   slowCorr;
-    map<int, SBASRegn>   UDRERegn;
-    map<int, SBASDegrL1> L1Degr;
-    map<int, SBASDegrL5> L5Degr;
+    map<GTime, int, std::greater<GTime>> corrUpdt;
+
+    map<int, SBASSlow> slowCorr;
+    map<int, SBASIntg> Integrity;
+
+    map<int, SBASFast> fastCorr;
+    map<int, SBASRegn> UDRERegn;
 };
 
 struct SBASIono
@@ -98,9 +121,37 @@ struct SBASIono
 
 extern mutex                   sbasMessagesMutex;
 extern map<GTime, SBASMessage> sbasMessages;
+extern Vector3d                sbasRoughStaPos;
 
 void writeEMSdata(Trace& trace, string emsfile);
 
-void readEMSdata(Trace& trace, string emsfile);
+void readEMSdata(string emsfile);
 
-void loadSBASdata(Trace& trace, GTime time, int prn, int freq);
+void loadSBASdata(Trace& trace, GTime time, Navigation& nav);
+
+void decodeSBASMessage(Trace& trace, GTime time, SBASMessage& mess, Navigation& nav);
+
+void decodeDFMCMessage(Trace& trace, GTime time, SBASMessage& mess, Navigation& nav);
+
+GTime adjustDay(double tod1, GTime nearTime);
+
+double estimateDFMCVar(Trace& trace, GTime time, SatPos& satPos, SBASIntg& sbsIntg);
+
+void estimateSBASProtLvl(Vector3d& staPos, Matrix3d& ecefP, double& horPL, double& verPL);
+
+void estimateDFMCPL(Vector3d& staPos, Matrix3d& ecefP, double& horPL, double& verPL);
+
+double sbasSmoothedPsudo(
+    Trace&  trace,
+    GTime   time,
+    SatSys  Sat,
+    string  staId,
+    double  measP,
+    double  measL,
+    double  variP,
+    double  variL,
+    double& varSmooth,
+    bool    update
+);
+
+void writeSPP(string filename, Receiver& rec);

@@ -234,8 +234,15 @@ void copySSRBlock(SatSys Sat, SSROut ssrBlock)
             entry.slop = 0;
             entry.slpv = 0;
 
+            updateRefTime(entry);
             pushBiasEntry(id, entry);
-            tracepdeex(CMPSSRTRCLVL + 1, std::cout, "%s %9.4f; ", code._to_string(), biasSSR.bias);
+            tracepdeex(
+                CMPSSRTRCLVL + 1,
+                std::cout,
+                "%s %9.4f; ",
+                enum_to_string(code),
+                biasSSR.bias
+            );
         }
 
         if (ssr.ssrCodeBias_map.find(entry.tini) == ssr.ssrCodeBias_map.end())
@@ -272,8 +279,15 @@ void copySSRBlock(SatSys Sat, SSROut ssrBlock)
             entry.slop = 0;
             entry.slpv = 0;
 
-            tracepdeex(CMPSSRTRCLVL + 1, std::cout, "%s %9.4f; ", code._to_string(), biasSSR.bias);
+            updateRefTime(entry);
             pushBiasEntry(id, entry);
+            tracepdeex(
+                CMPSSRTRCLVL + 1,
+                std::cout,
+                "%s %9.4f; ",
+                enum_to_string(code),
+                biasSSR.bias
+            );
         }
 
         if (ssr.ssrPhasBias_map.find(entry.tini) == ssr.ssrPhasBias_map.end())
@@ -734,7 +748,7 @@ int decodeSSR_orbit(vector<unsigned char>& data, GTime now)
 
     for (auto& [indx, Sat] : compactSsrSatelliteIndex[-1])
     {
-        int ni = (Sat.sys == +E_Sys::GAL) ? 10 : 8;
+        int ni = (Sat.sys == E_Sys::GAL) ? 10 : 8;
         if ((i + ni + 41) > bitLen)
             return E_ReturnType::BAD_LENGTH;
 
@@ -882,7 +896,7 @@ int decodeSSR_combined(vector<unsigned char>& data, GTime now)
 
     for (auto& [indx, Sat] : compactSsrSatelliteIndex[regionID])
     {
-        int ni = (Sat.sys == +E_Sys::GAL) ? 10 : 8;
+        int ni = (Sat.sys == E_Sys::GAL) ? 10 : 8;
 
         if (orbitAvailable)
         {
@@ -1802,7 +1816,7 @@ int decodecompactSSR(vector<unsigned char>& data, GTime now)
 
     int stype = getbitu(data, 12, 4);
 
-    CompactSSRSubtype subtype = CompactSSRSubtype::_from_integral(stype);
+    CompactSSRSubtype subtype = int_to_enum<CompactSSRSubtype>(stype);
 
     switch (subtype)
     {

@@ -1,7 +1,7 @@
 // #pragma GCC optimize ("O0")
 
 #include "common/ubxDecoder.hpp"
-#include <bsoncxx/json.hpp>
+#include <boost/json.hpp>
 #include "architectureDocs.hpp"
 #include "common/constants.hpp"
 #include "common/enums.h"
@@ -68,12 +68,12 @@ void UbxDecoder::decodeRAWX(vector<unsigned char>& payload)
 
         E_Sys sys = ubxSysMap[gnssId];
 
-        if (sys == +E_Sys::NONE)
+        if (sys == E_Sys::NONE)
             continue;
 
         E_ObsCode obsCode = ubxSysObsCodeMap[sys][sigId];
 
-        if (obsCode == +E_ObsCode::NONE)
+        if (obsCode == E_ObsCode::NONE)
             continue;
 
         Sig sig;
@@ -91,7 +91,7 @@ void UbxDecoder::decodeRAWX(vector<unsigned char>& payload)
             "meas %s %s %s %14.3lf %14.3lf\n",
             obs.time.to_string().c_str(),
             Sat.id().c_str(),
-            obsCode._to_string(),
+            enum_to_string(obsCode).c_str(),
             pr,
             cp
         );
@@ -143,13 +143,13 @@ void UbxDecoder::decodeMEAS(vector<unsigned char>& payload)
         dataField <<= 8;  // get leading ones
         dataField >>= 8;
 
-        E_MEASDataType measDataType = E_MEASDataType::_from_integral(dataType);
+        E_MEASDataType measDataType = int_to_enum<E_MEASDataType>(dataType);
 
         switch (measDataType)
         {
             default:
             {
-                // 				std::cout << "\n" << measDataType._to_string();
+                // 				std::cout << "\n" << enum_to_string(measDataType);
                 break;
             }
             case E_MEASDataType::GYRO_X:
@@ -157,14 +157,14 @@ void UbxDecoder::decodeMEAS(vector<unsigned char>& payload)
             case E_MEASDataType::GYRO_Z:
             {
                 double gyro = dataField * P2_12;
-                // 				std::cout << "\n" << measDataType._to_string() << " : " << gyro;
+                // 				std::cout << "\n" << enum_to_string(measDataType) << " : " << gyro;
 
                 int index = 0;
-                if (measDataType == +E_MEASDataType::GYRO_X)
+                if (measDataType == E_MEASDataType::GYRO_X)
                     index = 0;  // ubx indices are dumb and not ordered
-                else if (measDataType == +E_MEASDataType::GYRO_Y)
+                else if (measDataType == E_MEASDataType::GYRO_Y)
                     index = 1;
-                else if (measDataType == +E_MEASDataType::GYRO_Z)
+                else if (measDataType == E_MEASDataType::GYRO_Z)
                     index = 2;
 
                 gyroDataMaps[recId][lastTime + timeOffset][index] = gyro;
@@ -176,14 +176,14 @@ void UbxDecoder::decodeMEAS(vector<unsigned char>& payload)
             case E_MEASDataType::ACCL_Z:
             {
                 double accl = dataField * P2_10;
-                // 				std::cout << "\n" << measDataType._to_string() << " : " << accl;
+                // 				std::cout << "\n" << enum_to_string(measDataType) << " : " << accl;
 
                 int index = 0;
-                if (measDataType == +E_MEASDataType::ACCL_X)
+                if (measDataType == E_MEASDataType::ACCL_X)
                     index = 0;
-                else if (measDataType == +E_MEASDataType::ACCL_Y)
+                else if (measDataType == E_MEASDataType::ACCL_Y)
                     index = 1;
-                else if (measDataType == +E_MEASDataType::ACCL_Z)
+                else if (measDataType == E_MEASDataType::ACCL_Z)
                     index = 2;
 
                 acclDataMaps[recId][lastTime + timeOffset][index] = accl;
@@ -193,7 +193,7 @@ void UbxDecoder::decodeMEAS(vector<unsigned char>& payload)
             case E_MEASDataType::GYRO_TEMP:
             {
                 double temp = dataField * 1e-2;
-                // 				std::cout << "\n" << measDataType._to_string() << " : " << temp;
+                // 				std::cout << "\n" << enum_to_string(measDataType) << " : " << temp;
 
                 tempDataMaps[recId][lastTime + timeOffset] = temp;
 
@@ -242,11 +242,11 @@ void UbxDecoder::decodeEphFrames(SatSys Sat)
         eph.type                               = E_NavMsgType::LNAV;
         nav.ephMap[eph.Sat][eph.type][eph.toe] = eph;
 
-        bsoncxx::builder::basic::document doc = {};
+        boost::json::object doc = {};
 
         traceBrdcEphBody(doc, eph);
 
-        std::cout << bsoncxx::to_json(doc) << "\n";
+        std::cout << boost::json::serialize(doc) << "\n";
         //
         // 		if (acsConfig.output_decoded_rtcm_json)
         // 			traceBrdcEph(RtcmMessageType::GPS_EPHEMERIS, eph);
@@ -271,10 +271,10 @@ void UbxDecoder::decodeSFRBX(vector<unsigned char>& payload)
 
     E_Sys sys = ubxSysMap[gnssId];
 
-    if (sys == +E_Sys::NONE)
+    if (sys == E_Sys::NONE)
         return;
 
-    if (sys != +E_Sys::GPS)
+    if (sys != E_Sys::GPS)
         return;
 
     SatSys Sat(sys, satId);

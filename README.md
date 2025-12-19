@@ -2,27 +2,53 @@
 
 # Ginan: GNSS Analysis Software Toolkit
 
-[![Version](https://img.shields.io/badge/version-v3.1.0-blue.svg)](https://github.com/GeoscienceAustralia/ginan/releases)
+[![Version](https://img.shields.io/badge/version-v4.0.0-blue.svg)](https://github.com/GeoscienceAustralia/ginan/releases)
 [![License](https://img.shields.io/badge/license-Apache--2.0-green.svg)](LICENSE.md)
 [![Platform](https://img.shields.io/badge/platform-Linux%20%7C%20macOS%20%7C%20Windows-lightgrey.svg)](#supported-platforms)
 [![Docker](https://img.shields.io/badge/docker-available-blue.svg)](https://hub.docker.com/r/gnssanalysis/ginan)
 
 **Ginan** is a powerful, open-source software toolkit for processing Global Navigation Satellite System (GNSS) observations for geodetic applications. Developed by Geoscience Australia, Ginan provides state-of-the-art capabilities for precise positioning, orbit determination, and atmospheric modeling.
 
+## How to cite
+
+If you use Ginan in a publication, please cite:
+```
+McClusky, Simon; Hammond, Aaron; Maj, Ronald; Allgeyer, Sébastien; Harima, Ken; Yeo, Mark; Du, Eugene; Riddell, Anna, "Precise Point Positioning with Ginan: Geoscience Australia’s Open-Source GNSS Analysis Centre Software," Proceedings of the ION 2024 Pacific PNT Meeting, Honolulu, Hawaii, April 2024, pp. 248-280. https://doi.org/10.33012/2024.19598
+```
+
 ## Table of Contents
 
 - [Quick Start](#quick-start)
 - [Overview](#overview)
+   - [How to cite](#how-to-cite)
+   - [Supported GNSS Constellations](#supported-gnss-constellations)
+   - [Key Features and Capabilities](#key-features-and-capabilities)
+   - [Architecture](#architecture)
 - [Installation](#installation)
-    - [Using Docker (Recommended)](#using-ginan-with-docker)
-    - [Using AppImage](#using-ginan-with-an-appimage)
-    - [From Source](#installation-from-source)
-- [Getting Started](#getting-started-with-the-examples)
+   - [Using Ginan with Docker](#using-ginan-with-docker)
+   - [Precompiled binaries](#precompiled-binaries)
+   - [Installation from Source](#installation-from-source)
+      - [Tested Platforms](#tested-platforms)
+      - [Prerequisites](#prerequisites)
+      - [Build Process using `vcpkg` + CMake presets (Recommanded)](#build-process-using-vcpkg--cmake-presets-recommanded)
+      - [Legacy: manual `cmake` + `make` instructions](#legacy-manual-cmake---make-instructions)
+   - [Python Environment Setup](#python-environment-setup)
+- [Getting Started with the examples](#getting-started-with-the-examples)
+   - [Running Your First Example](#running-your-first-example)
+   - [Adding Ginan to PATH](#adding-ginan-to-path)
 - [Additional Tools and Scripts](#additional-tools-and-scripts)
 - [Documentation](#documentation)
+   - [User Documentation](#user-documentation)
+   - [Developer Documentation](#developer-documentation)
+   - [Generating Code Documentation](#generating-code-documentation)
 - [Contributing](#contributing)
+   - [Reporting Issues](#reporting-issues)
+   - [Contributing Code](#contributing-code)
+   - [Development Setup](#development-setup)
 - [Support](#support)
+   - [Getting Help](#getting-help)
 - [License](#license)
+   - [Third-Party Components](#third-party-components)
 - [Acknowledgements](#acknowledgements)
 
 ## Quick Start
@@ -31,7 +57,7 @@ The fastest way to get started with Ginan is using Docker:
 
 ```bash
 # Pull and run the latest Ginan container
-docker run -it -v $(pwd):/data gnssanalysis/ginan:v3.1.0 bash
+docker run -it -v $(pwd):/data gnssanalysis/ginan:v4.0.0 bash
 
 # Verify installation
 pea --help
@@ -44,6 +70,8 @@ pea --config ppp_example.yaml
 ## Overview
 
 Ginan is a comprehensive processing package for GNSS observations in geodetic applications, supporting multiple satellite constellations and providing advanced analysis capabilities.
+
+
 
 ### Supported GNSS Constellations
 
@@ -92,7 +120,7 @@ Choose the installation method that best fits your needs:
 
 ```bash
 # Run Ginan container with data volume mounting
-docker run -it -v ${pwd}:/data gnssanalysis/ginan:v3.1.0 bash
+docker run -it -v ${pwd}:/data gnssanalysis/ginan:v4.0.0 bash
 ```
 
 This command:
@@ -108,52 +136,35 @@ This command:
 pea --help
 ```
 
-### Using Ginan with an AppImage
+### Precompiled binaries
 
-**For Linux users** - Run Ginan without installing dependencies:
+Precompiled binaries for **Ginan** and **GinanUI** are available on the project's GitHub Releases page: https://github.com/GeoscienceAustralia/ginan/releases
 
-```bash
-# Download the latest AppImage
-git clone -b develop-weekly-appimage --depth 1 --single-branch https://github.com/GeoscienceAustralia/ginan.git
+We publish builds for the following platforms:
 
-# Make executable and run
-chmod +x ginan/Ginan-x86_64.AppImage
-./ginan/Ginan-x86_64.AppImage
-```
+- Linux (x86_64)
+- macOS (arm64 and x86_64)
+- Windows (x86_64)
 
-**For Windows users** (via WSL):
-```bash
-# Install Ubuntu on Windows
-wsl --install -d ubuntu
+These artifacts are provided for convenience and have been tested on our CI runners and a subset of target systems. They may not work on every configuration — if you encounter problems please try the Docker image or build from source (see the Build Process section) and open an issue on GitHub with your OS and steps to reproduce.
 
-# Run AppImage
-./ginan/Ginan-x86_64.AppImage
-```
-
-**Troubleshooting:**
-If the AppImage fails to run, install required libraries:
-```bash
-sudo apt install fuse libfuse2
-```
-
-**Note:** AppImage contains the core PEA executable but excludes Python scripts and example data.
-
+Note about Windows binaries: We have observed an output file-size limitation on Windows builds where RTS/output files appear limited at about 2.1 GB (roughly equivalent to a PPP processing of two stations over one day at 30 s resolution). If you require larger RTS outputs, run the processing on Linux/macOS (or in the Docker image) or build from source on a platform without this limitation. We plan to implement a permanent solution in a future release.
 
 ### Installation from Source
 
 **For developers and advanced users** who need to modify the source code or require specific configurations.
 
-### Tested Platforms
+#### Tested Platforms
 
 | Platform | Tested Versions | Notes |
 |----------|-----------------|-------|
-| **Linux** | Ubuntu 18.04, 20.04, 22.04, 24.04 | Primary development platform |
+| **Linux** | Ubuntu 22.04, 24.04 | Primary development platform |
 | **macOS** | 10.15+ (x86) | Limited testing |
-| **Windows** | 10+ | Via Docker or WSL only - Limited testing|
+| **Windows** | 10+ |  Limited testing|
 
-### Prerequisites
+#### Prerequisites
 
-#### System Dependencies
+##### System Dependencies
 
 **Compilers:**
 
@@ -165,11 +176,8 @@ sudo apt install fuse libfuse2
 
 - **YAML** ≥ 0.6  
 
-- **Boost** ≥ 1.73 (≥ 1.74 for GCC 11+)  
-
-- **Mongo C Driver** ≥ 1.17.1  
-
-- **Mongo C++ Driver** ≥ 3.6.0 (= 3.7.0 for GCC 11+)  
+- **Boost** ≥ 1.75 
+ 
 
 - **Eigen3** ≥ 3.4  
 
@@ -177,15 +185,59 @@ sudo apt install fuse libfuse2
 
 **Optional Dependencies:**
 
+- **Mongo C Driver** ≥ 1.17.1  
+
+- **Mongo C++ Driver** ≥ 3.6.0 (= 3.7.0 for GCC 11+) 
+
 - **MongoDB** (for database features)  
 
 - **netCDF4**  (for tidal loading computation)
 
 - **Python** ≥ 3.9  
 
-#### Quick Installation Scripts
+#### Build Process using `vcpkg` + CMake presets (Recommanded)
 
-Pre-written installation scripts are available in `scripts/installation/`:
+We recommend using `vcpkg` for dependency management together with the repository CMake presets.
+
+1. Bootstrap and install `vcpkg` (from repository root):
+
+```bash
+# Clone/bootstrap vcpkg (if not present)
+./vcpkg/bootstrap-vcpkg.sh 
+
+# Install packages for your target triplet (example: Linux x86_64)
+./vcpkg/vcpkg install --triplet x64-linux --x-install-root=./vcpkg_installed
+# For macOS: use `arm64-osx` or `x64-osx`. For Windows cross builds (on linux) use `x64-mingw-static`.
+```
+
+2. Configure and build with a CMake preset (run from `src`):
+
+```bash
+cd src
+# Choose the preset that matches your platform (examples: `release`, `macos-arm64-release`, `macos-x64-release`, `windows-cross-release`)
+cmake --preset release
+cmake --build --preset release
+
+# Or build the preset directory directly (example for Linux):
+cmake --build build/linux-Release --parallel $(nproc)
+```
+
+Note on loading / netCDF: the ocean-tide loading components currently have known problems when built from the `vcpkg` dependency set due to issues with the `netcdf` package in some vcpkg triplets. If you rely on tidal-loading features (the `make_otl_blq` target and related tools), either:
+
+- Build those components from source using your system `netcdf` (install `netcdf`/`netcdf-c` via the OS package manager and use the legacy `cmake`/`make` flow), or
+- Track the vcpkg `netcdf` fixes and retry when upstream provides a compatible package for your target triplet.
+
+If you need help reproducing or a suggested workaround for your platform, open an issue with your OS/triplet and vcpkg versions.
+
+Notes:
+- The CI uses `--x-install-root=./vcpkg_installed` to install packages locally for reproducible builds.
+- If you prefer not to use `vcpkg`, the legacy manual flow below remains supported.
+
+#### Legacy: manual `cmake` + `make` instructions
+
+##### Quick Installation Scripts (legacy)
+
+Pre-written installation scripts are available in `scripts/installation/` for systems where you prefer distro-specific package installation instead of `vcpkg`:
 
 ```bash
 # Ubuntu 24.04
@@ -194,7 +246,7 @@ Pre-written installation scripts are available in `scripts/installation/`:
 # Ubuntu 22.04
 ./scripts/installation/ubuntu22.sh
 
-# Ubuntu 20.04  
+# Ubuntu 20.04
 ./scripts/installation/ubuntu20.sh
 
 # Fedora 38
@@ -204,57 +256,61 @@ Pre-written installation scripts are available in `scripts/installation/`:
 cat scripts/installation/generic.md
 ```
 
-**Note:** Scripts are maintained as best-effort and may require adjustments for your specific environment.
+**Note:** These scripts are maintained as best-effort and may require adjustments for your environment. If you are using the `vcpkg` + CMake presets workflow, follow the `vcpkg` steps in the Build Process section instead.
 
+The older manual flow is still available for users who prefer it:
 
-### Build Process
+1. Create build directory:
 
-1. **Create build directory:**
-   ```bash
-   mkdir -p src/build
-   cd src/build
-   ```
+```bash
+mkdir -p src/build
+cd src/build
+```
 
-2. **Configure with CMake:**
-   ```bash
-   cmake ../
-   ```
+2. Configure with CMake (legacy):
 
-3. **Compile (choose one):**
-   ```bash
-   # Build everything (parallel compilation recommended)
-   make -j$(nproc)
-   
-   # Build specific components
-   make pea -j$(nproc)              # Core PEA executable
-   make make_otl_blq -j$(nproc)     # Ocean tide loading
-   make interpolate_loading -j$(nproc)  # Loading interpolation
-   ```
+```bash
+cmake ../
+```
 
-4. **Verify installation:**
-   ```bash
-   cd ../../exampleConfigs
-   ../bin/pea --help
-   ```
+3. Compile (legacy):
 
-   Expected output:
-   ```
-   PEA starting... (main ginan-v3.1.0 from ...)
-   Options:
-     -h [ --help ]     Help
-     -q [ --quiet ]    Less output
-     ...
-   ```
+```bash
+# Build everything (parallel compilation recommended)
+make -j$(nproc)
 
-5. **Download example data:**
-   ```bash
-   cd ../inputData/data
-   ./getData.sh
-   cd ../products  
-   ./getProducts.sh
-   ```
+# Build specific components
+make pea -j$(nproc)              # Core PEA executable
+make make_otl_blq -j$(nproc)     # Ocean tide loading
+make interpolate_loading -j$(nproc)  # Loading interpolation
+```
 
-#### Python Environment Setup
+4. Verify installation:
+
+```bash
+cd ../../exampleConfigs
+../bin/pea --help
+```
+
+Expected output:
+```
+PEA starting... (main ginan-v4.0.0 from ...)
+Options:
+  -h [ --help ]     Help
+  -q [ --quiet ]    Less output
+  ...
+```
+
+5. Download example data:
+
+```bash
+cd ../inputData/data
+./getData.sh
+cd ../products  
+./getProducts.sh
+```
+
+### Python Environment Setup
 
 Ginan uses Python for automation, post-processing, and visualization:
 
@@ -393,7 +449,7 @@ Ginan incorporates code from several excellent open-source projects:
 
 | Project | License | Purpose | Original Source |
 |---------|---------|---------|-----------------|
-| **Better Enums** | BSD-2-Clause | Enhanced enum support | [github.com/aantron/better-enums](http://github.com/aantron/better-enums) |
+| **Magic Enum** | MIT | Enhanced enum support | [github.com/Neargye/magic_enums](https://github.com/Neargye/magic_enums) |
 | **EGM96** | zlib | Earth gravitational model | [github.com/emericg/EGM96](https://github.com/emericg/EGM96) |
 | **IERS2010**| Public Domain | Tidal displacement computation | [github.com/xanthospap/iers2010](https://github.com/xanthospap/iers2010)
 | **JPL Ephemeris** | GPL-3 | Planetary ephemeris | [github.com/Bill-Gray/jpl_eph](https://github.com/Bill-Gray/jpl_eph) |
@@ -406,4 +462,4 @@ All incorporated code has been preserved with appropriate modifications in the `
 
 ---
 
-**Developed by [Geoscience Australia](https://www.ga.gov.au/)** | **Version 3.1.0** | **[GitHub Repository](https://github.com/GeoscienceAustralia/ginan)**
+**Developed by [Geoscience Australia](https://www.ga.gov.au/)** | **Version 4.0.0** | **[GitHub Repository](https://github.com/GeoscienceAustralia/ginan)**

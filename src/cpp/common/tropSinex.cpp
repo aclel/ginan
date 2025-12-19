@@ -115,9 +115,9 @@ void setDescription(bool isSmoothed)  ///< if solution is smoothed (RTS or fixed
     theSinex.tropDesc.strings["GEOID MODEL"]          = acsConfig.geoid_model;
     theSinex.tropDesc.ints["TROPO SAMPLING INTERVAL"] = acsConfig.epoch_interval;
     theSinex.tropDesc.strings["A PRIORI TROPOSPHERE"] =
-        recOpts.tropModel.models.front()._to_string();
+        enum_to_string(recOpts.tropModel.models.front());
     theSinex.tropDesc.strings["TROPO MAPPING FUNCTION"] =
-        recOpts.tropModel.models.front()._to_string();
+        enum_to_string(recOpts.tropModel.models.front());
     theSinex.tropDesc.strings["GRADS MAPPING FUNCTION"] = acsConfig.gradient_mapping_function;
     theSinex.tropDesc.ints["ELEVATION CUTOFF ANGLE"]    = recOpts.elevation_mask_deg;
     theSinex.tropDesc.vecStrings["TROPO PARAMETER NAMES"].clear();

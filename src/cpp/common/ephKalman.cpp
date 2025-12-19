@@ -32,7 +32,7 @@ bool satClkKalman(Trace& trace, GTime time, SatPos& satPos, const KFState* kfSta
         kfKey.type = KF::SAT_CLOCK;
 
         bool found = true;
-        found &= kfState.getKFValue(kfKey, thisClk);
+        found      = found && (kfState.getKFValue(kfKey, thisClk) != E_Source::NONE);
 
         if (found == false)
         {
@@ -43,7 +43,7 @@ bool satClkKalman(Trace& trace, GTime time, SatPos& satPos, const KFState* kfSta
 
         kfKey.type = KF::SAT_CLOCK_RATE;
 
-        found &= kfState.getKFValue(kfKey, thisVel);
+        found = found && (kfState.getKFValue(kfKey, thisVel) != E_Source::NONE);
 
         kfKey.num++;
 
@@ -105,8 +105,10 @@ bool satPosKalman(Trace& trace, GTime time, SatPos& satPos, const KFState* kfSta
             double dummy;
 
             bool found =
-                (kfKey.num = i, kfState.getKFValue(kfKey, rSat0(i), &dummy, &dummy, false)) &&
-                (kfKey.num = i + 3, kfState.getKFValue(kfKey, vSat0(i), &dummy, &dummy, false));
+                (kfKey.num = i,
+                 kfState.getKFValue(kfKey, rSat0(i), &dummy, &dummy, false) != E_Source::NONE) &&
+                (kfKey.num = i + 3,
+                 kfState.getKFValue(kfKey, vSat0(i), &dummy, &dummy, false) != E_Source::NONE);
 
             if (found == false)
             {

@@ -15,7 +15,7 @@
 class loadGrid
 {
    public:
-    loadGrid(){};
+    loadGrid() {};
     loadGrid(std::string name);
     ~loadGrid();
     void   set_name(std::string name);

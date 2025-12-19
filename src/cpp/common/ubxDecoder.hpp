@@ -44,12 +44,12 @@ struct UbxDecoder : ObsLister, IcdDecoder
             {
                 break;
             }
-            case E_RXMId::RAWX:
+            case static_cast<int>(E_RXMId::RAWX):
             {
                 decodeRAWX(payload);
                 break;
             }
-            case E_RXMId::SFRBX:
+            case static_cast<int>(E_RXMId::SFRBX):
             {
                 decodeSFRBX(payload);
                 break;
@@ -66,7 +66,7 @@ struct UbxDecoder : ObsLister, IcdDecoder
             {
                 break;
             }
-            case E_ESFId::MEAS:
+            case static_cast<int>(E_ESFId::MEAS):
             {
                 decodeMEAS(payload);
                 break;
@@ -84,12 +84,12 @@ struct UbxDecoder : ObsLister, IcdDecoder
             {
                 break;
             }
-            case E_UBXClass::RXM:
+            case static_cast<int>(E_UBXClass::RXM):
             {
                 decodeRXM(payload, id);
                 break;
             }
-            case E_UBXClass::ESF:
+            case static_cast<int>(E_UBXClass::ESF):
             {
                 decodeESF(payload, id);
                 break;

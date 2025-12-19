@@ -1290,8 +1290,8 @@ void updateSatYaw(
     std::replace(blockTypeStr.begin(), blockTypeStr.end(), '-', '_');
     std::replace(blockTypeStr.begin(), blockTypeStr.end(), '+', 'P');
     E_Block blockType = E_Block::UNKNOWN;
-    if (E_Block::_is_valid(blockTypeStr.c_str()))
-        blockType = E_Block::_from_string_nocase(blockTypeStr.c_str());
+    if (is_valid_enum_string<E_Block>(blockTypeStr.c_str()))
+        blockType = string_to_enum_nocase_throw<E_Block>(blockTypeStr.c_str());
 
     switch (blockType)
     {
@@ -1433,13 +1433,13 @@ bool satAttModel(
 )
 {
     double yaw;
-    if (source == +E_Source::NOMINAL)
+    if (source == E_Source::NOMINAL)
         yaw = attStatus.nominalYaw;  // Nominal yaw only - no advanced noon/midnight turns
     else
         yaw = attStatus.modelYaw;
 
     bool pass = false;
-    if (attStatus.modelYawValid || source == +E_Source::NOMINAL)
+    if (attStatus.modelYawValid || source == E_Source::NOMINAL)
     {
         pass = true;
     }
@@ -1573,7 +1573,7 @@ bool preciseAttitude(
         default:
         {
             BOOST_LOG_TRIVIAL(error)
-                << "Unknown frame type in " << __FUNCTION__ << ": " << entry1.frame._to_string();
+                << "Unknown frame type in " << __FUNCTION__ << ": " << enum_to_string(entry1.frame);
             return false;
         }
     }
@@ -1612,19 +1612,19 @@ bool kalmanAttitude(
 
         if (i == 0)
         {
-            found &= kfState.getKFValue(kfKey, quat.w());
+            found = found && (kfState.getKFValue(kfKey, quat.w()) != E_Source::NONE);
         }
         if (i == 1)
         {
-            found &= kfState.getKFValue(kfKey, quat.x());
+            found = found && (kfState.getKFValue(kfKey, quat.x()) != E_Source::NONE);
         }
         if (i == 2)
         {
-            found &= kfState.getKFValue(kfKey, quat.y());
+            found = found && (kfState.getKFValue(kfKey, quat.y()) != E_Source::NONE);
         }
         if (i == 3)
         {
-            found &= kfState.getKFValue(kfKey, quat.z());
+            found = found && (kfState.getKFValue(kfKey, quat.z()) != E_Source::NONE);
         }
     }
 
@@ -1663,7 +1663,7 @@ bool updateSatAtt(
         {
             default:
                 BOOST_LOG_TRIVIAL(error) << "Unknown attitudeType in " << __FUNCTION__ << ": "
-                                         << attitudeType._to_string();
+                                         << enum_to_string(attitudeType);
             case E_Source::NOMINAL:
             {
                 valid = satAttModel(rSat, vSat, attStatus, E_Source::NOMINAL);
@@ -1785,7 +1785,7 @@ void recAtt(
         {
             default:
                 BOOST_LOG_TRIVIAL(error) << "Unknown attitudeType in " << __FUNCTION__ << ": "
-                                         << attitudeType._to_string();
+                                         << enum_to_string(attitudeType);
             case E_Source::MODEL:  // fallthrough
             case E_Source::NOMINAL:
             {

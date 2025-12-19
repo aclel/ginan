@@ -23,7 +23,7 @@ loadGrid::loadGrid(std::string name) : fileName(name)
     return;
 };
 
-loadGrid::~loadGrid(){
+loadGrid::~loadGrid() {
     //	amplitude.resize(boost::extents[0][0]);
     //	phase.resize(boost::extents[0][0]);
     //	return ;

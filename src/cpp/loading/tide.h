@@ -15,7 +15,7 @@
 class tide
 {
    public:
-    tide(){};
+    tide() {};
     tide(std::string name);
     ~tide();
     void   set_name(std::string name);

@@ -11,6 +11,7 @@
 #include <vector>
 #include "common/acsConfig.hpp"
 #include "common/eigenIncluder.hpp"
+#include "common/enums.h"
 #include "common/gTime.hpp"
 #include "common/satSys.hpp"
 #include "common/trace.hpp"
@@ -39,12 +40,12 @@ struct KFState;
  */
 struct KFKey
 {
-    short int type = 0;     ///< Key type (From enum)
-    SatSys    Sat  = {};    ///< Satellite
-    string    str;          ///< String (receiver ID)
-    int       num = 0;      ///< Subkey number (eg xyz => 0,1,2)
-    string    comment;      ///< Optional comment
-    Receiver* rec_ptr = 0;  ///< Pointer to station object for dereferencing
+    KF        type = KF::NONE;  ///< Key type (From enum)
+    SatSys    Sat  = {};        ///< Satellite
+    string    str;              ///< String (receiver ID)
+    int       num = 0;          ///< Subkey number (eg xyz => 0,1,2)
+    string    comment;          ///< Optional comment
+    Receiver* rec_ptr = 0;      ///< Pointer to station object for dereferencing
 
     mutable GTime estimatedTime;
 
@@ -66,15 +67,15 @@ struct KFKey
                 int num1 = num / 100;
                 int num2 = num % 100;
 
-                string code1 = E_ObsCode::_from_integral(num1)._to_string();
-                string code2 = E_ObsCode::_from_integral(num2)._to_string();
+                string code1 = enum_to_string(static_cast<E_ObsCode>(num1));
+                string code2 = enum_to_string(static_cast<E_ObsCode>(num2));
                 code         = code1 + "-" + code2;
             }
 
             // Uncombined
             else
             {
-                code = E_ObsCode::_from_integral(num)._to_string();
+                code = enum_to_string(static_cast<E_ObsCode>(num));
             }
 
             return code;
@@ -91,11 +92,12 @@ struct KFKey
         int component = 0;
 
         // Empirical force coefficients
-        if (type >= KF::EMP_D_0 && type <= KF::EMP_Q_4 && (type - KF::EMP_D_0) % 5 != 0)
+        if (type >= KF::EMP_D_0 && type <= KF::EMP_Q_4 &&
+            (static_cast<int>(type) - static_cast<int>(KF::EMP_D_0)) % 5 != 0)
         {
-            component = E_TrigType::COS + num;
+            // component = E_TrigType::COS + num;
 
-            code = E_TrigType::_from_integral(E_TrigType::COS + num)._to_string();
+            code = enum_to_string(enum_add(E_TrigType::COS, num));
 
             return code;
         }
@@ -106,28 +108,28 @@ struct KFKey
             type == KF::ORBIT || type == KF::ORBIT_MEAS || type == KF::XFORM_XLATE ||
             type == KF::XFORM_RTATE || type == KF::XFORM_XLATE_RATE || type == KF::XFORM_RTATE_RATE)
         {
-            component = E_StateComponent::X + num;
+            component = enum_to_int(enum_add(E_StateComponent::X, num));
         }
 
         // Quaternions
         else if (type == KF::ORIENTATION)
         {
-            component = E_StateComponent::W + num;
+            component = enum_to_int(enum_add(E_StateComponent::W, num));
         }
 
         // Local tangental coordinates
         else if (type == KF::TROP_GRAD || type == KF::ANT_DELTA)
         {
-            component = E_StateComponent::E + num;
+            component = enum_to_int(enum_add(E_StateComponent::E, num));
         }
 
         // EOP parameters
         else if (type == KF::EOP || type == KF::EOP_RATE)
         {
-            component = E_StateComponent::XP + num;
+            component = enum_to_int(enum_add(E_StateComponent::XP, num));
         }
 
-        code = E_StateComponent::_from_integral(component)._to_string();
+        code = string(magic_enum::enum_name(static_cast<E_StateComponent>(component)));
         std::replace(code.begin(), code.end(), '_', '-');
 
         return code;
@@ -156,7 +158,7 @@ struct KFKey
             buff,
             sizeof(buff),
             "%10s\t%4s\t%4s\t%7s",
-            KF::_from_integral(type)._to_string(),
+            enum_to_string(type).c_str(),
             Sat.id().c_str(),
             str.c_str(),
             this->code().c_str()
@@ -172,7 +174,7 @@ struct KFKey
             buff,
             sizeof(buff),
             "%s,%s,%s,%s",
-            KF::_from_integral(type)._to_string(),
+            enum_to_string(type).c_str(),
             Sat.id().c_str(),
             str.c_str(),
             this->code().c_str()
@@ -264,7 +266,7 @@ struct KFMeas
     vector<map<string, void*>>                  metaDataMaps;
     vector<map<E_Component, ComponentsDetails>> componentsMaps;
 
-    KFMeas(){
+    KFMeas() {
 
     };
 
@@ -631,7 +633,6 @@ struct KFState : KFState_
 
     void leastSquareSigmaChecks(
         RejectCallbackDetails& callbackDetails,
-        double                 adjustment,
         MatrixXd&              Pp,
         KFStatistics&          statistics
     );
@@ -722,8 +723,9 @@ struct KFState : KFState_
         Trace&        trace,
         KFMeas&       kfMeas,
         const string& suffix,
-        bool          initCovars = false,
-        bool          innovReady = false
+        bool          initCovars   = false,
+        bool          innovReady   = false,
+        bool          skipLsqCheck = false
     );
 
     VectorXd getSubState(

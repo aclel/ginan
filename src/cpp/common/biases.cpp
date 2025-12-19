@@ -11,6 +11,22 @@ FileType BSX__() {}
 
 BiasMap biasMaps;  ///< Multi dimensional map, as biasMaps[measType][id][code1][code2][time]
 
+void updateRefTime(BiasEntry& entry)
+{
+    if (entry.tini != GTime::noTime() && entry.tfin != GTime::noTime())
+        entry.refTime = entry.tini + (entry.tfin - entry.tini).to_double() / 2;
+    else if (entry.tini != GTime::noTime() && entry.tfin == GTime::noTime())
+        entry.refTime = entry.tini;
+    else if (entry.tini == GTime::noTime() && entry.tfin != GTime::noTime())
+        entry.refTime = entry.tfin;
+    else
+    {
+        BOOST_LOG_TRIVIAL(error) << "Invalid interval for " << std::to_string(entry.measType)
+                                 << " bias: " << entry.name << ":" << entry.Sat.id() << ":"
+                                 << enum_to_string(entry.cod1) << "-" << enum_to_string(entry.cod2);
+    }
+}
+
 /** Initialise satellite DSBs between default signals, e.g. P1-P2 DCBs, with 0 values
  */
 void initialiseBias()
@@ -22,7 +38,7 @@ void initialiseBias()
     entry.name     = "";
     entry.source   = "init";
 
-    for (E_Sys sys : E_Sys::_values())
+    for (E_Sys sys : magic_enum::enum_values<E_Sys>())
     {
         auto sats = getSysSats(sys);
         if (acsConfig.process_sys[sys])
@@ -83,19 +99,19 @@ void loadStateBiases(  // todo aaron this probably needs to be called to write b
 {
     for (auto& [kfKey, index] : kfState.kfIndexMap)
     {
-        if (kfKey.type != +KF::CODE_BIAS && kfKey.type != +KF::PHASE_BIAS)
+        if (kfKey.type != KF::CODE_BIAS && kfKey.type != KF::PHASE_BIAS)
         {
             continue;
         }
 
         BiasEntry entry;
-        if (kfKey.type == +KF::CODE_BIAS)
+        if (kfKey.type == KF::CODE_BIAS)
             entry.measType = CODE;
-        if (kfKey.type == +KF::PHASE_BIAS)
+        if (kfKey.type == KF::PHASE_BIAS)
             entry.measType = PHAS;
 
         entry.tini   = kfState.time;
-        entry.cod1   = E_ObsCode::_from_integral(kfKey.num);
+        entry.cod1   = int_to_enum<E_ObsCode>(kfKey.num);
         entry.bias   = kfState.x(index);
         entry.var    = kfState.P(index, index);
         entry.name   = kfKey.str;
@@ -110,6 +126,7 @@ void loadStateBiases(  // todo aaron this probably needs to be called to write b
         id.push_back(':');
         id.push_back(entry.Sat.sysChar());
 
+        updateRefTime(entry);
         pushBiasEntry(id, entry);
     }
 }
@@ -153,7 +170,7 @@ void cullOldBiases(GTime time)
                         continue;
                     }
 
-                    foundIt++;
+                    foundIt++;  // Always reserve the latest entry when culling
 
                     // delete all before this found one (after since its reversed ordering)
                     code2BiasMap.erase(foundIt, code2BiasMap.end());
@@ -223,12 +240,12 @@ bool decomposeTGDBias(
 
     E_ObsCode cod1 = E_ObsCode::NONE;
     E_ObsCode cod2 = E_ObsCode::NONE;
-    if (sys == +E_Sys::GPS)
+    if (sys == E_Sys::GPS)
     {
         cod1 = E_ObsCode::L1W;
         cod2 = E_ObsCode::L2W;
     }
-    else if (sys == +E_Sys::QZS)
+    else if (sys == E_Sys::QZS)
     {
         cod1 = E_ObsCode::L1C;
         cod2 = E_ObsCode::L2L;
@@ -253,6 +270,7 @@ bool decomposeTGDBias(
     entry.var    = 0;
     entry.source = "tgd";
 
+    updateRefTime(entry);
     pushBiasEntry(id, entry);
 
     return true;
@@ -289,6 +307,7 @@ bool decomposeBGDBias(
     entry.bias = bgdE1E5a;
     entry.var  = 0;
 
+    updateRefTime(entry);
     pushBiasEntry(
         id,
         entry
@@ -327,26 +346,27 @@ BiasEntry interpolateBias(
     const BiasEntry& bias2   ///< Second bias entry
 )
 {
-    BiasEntry output = bias1;
-
     double dt1 = (time - bias1.refTime).to_double();
     double dt2 = (time - bias2.refTime).to_double();
     double dT  = (bias2.refTime - bias1.refTime).to_double();
 
-    if (time < bias2.tini     // bias1.tini < time < bias2.tini, do interpolation
-        && output.slop == 0)  // calculate bias slope (as to interpolate linearly) if not available
+    BiasEntry output = bias1;
+    if (dT == 0 ||
+        output.slop != 0)  // Use bias1 to extrapolate when not interpolatable or slop is not 0
+    {
+        output.bias += output.slop * dt1;
+        output.var += output.slpv * SQR(dt1);
+    }
+    else  // Otherwise do interpolation
     {
         double coeff1 = -dt2 / dT;
         double coeff2 = -dt1 / dT;
         output.bias   = bias1.bias * coeff1 - bias2.bias * coeff2;
         output.var    = bias1.var * SQR(coeff1) + bias2.var * SQR(coeff2);
-        output.tini   = bias1.refTime;
-        output.tfin   = bias2.refTime;
-    }
-    else  // otherwise use existing bias slope value (and tini and tfin) whether it is 0 or not
-    {
-        output.bias += output.slop * dt1;
-        output.var = bias1.var + bias1.slpv * SQR(dt1);
+        output.tini   = time;  // Always reference to current time
+        // output.tfin   = GTime::noTime();
+        // output.slop   = (bias2.bias - bias1.bias) / dT;
+        // output.slpv   = (bias2.var + bias1.var) / SQR(dT);
     }
 
     return output;
@@ -359,7 +379,7 @@ bool calculateBias(
                                     ///< codes, as timeBiasMap[time]
 )
 {
-    // find the last bias in that map that comes before the desired time
+    // find the last bias in that map that comes no later than the desired time
     auto biasIt = timeBiasMap.lower_bound(time);
     if (biasIt == timeBiasMap.end())
     {
@@ -383,16 +403,10 @@ bool calculateBias(
 
     auto& [dummy2, bias2] = *biasIt;
 
-    GTime tfin = bias2.tfin;
-    if (tfin == GTime::noTime())
-    {
-        tfin = bias2.tini + S_IN_DAY;
-    }
+    output = interpolateBias(time, bias1, bias2);
 
-    if (time <=
-        tfin)  // Only calculate bias when requested epoch time is within the valid time period
+    if (isnan(output.bias) == false)
     {
-        output = interpolateBias(time, bias1, bias2);
         return true;
     }
 
@@ -499,9 +513,9 @@ bool biasRecurser(
         output.cod2 = pathB.cod2;
 
         // 		printf("\nTraversing %s %s %s %f %f %f",
-        // 			   pathA.cod1._to_string(),
-        // 			   pathA.cod2._to_string(),
-        // 			   pathB.cod2._to_string(),
+        // 			   pathA.enum_to_string(cod1),
+        // 			   pathA.enum_to_string(cod2),
+        // 			   pathB.enum_to_string(cod2),
         // 			   pathA.bias,
         // 			   pathB.bias,
         // 			   output.bias);
@@ -580,9 +594,9 @@ bool getBias(
         // 		kfKey.str		= id;
         // 		kfKey.Sat		= SatSys(Sat.sys);
         kfKey.Sat = Sat;
-        kfKey.num = obsCode1;
+        kfKey.num = static_cast<int>(obsCode1);
 
-        bool found = kfState.getKFValue(kfKey, bias, &var);
+        bool found = (kfState.getKFValue(kfKey, bias, &var) != E_Source::NONE);
 
         if (found)
         {
@@ -590,7 +604,7 @@ bool getBias(
         }
     }
 
-    if (Sat.sys == +E_Sys::GLO)
+    if (Sat.sys == E_Sys::GLO)
         id = id + ":" + Sat.id();
     else
         id = id + ":" + Sat.sysChar();
@@ -607,20 +621,21 @@ bool getBias(
         "\nReading %s bias for %6s, %4s-%4s ...",
         type.c_str(),
         id.c_str(),
-        obsCode1._to_string(),
-        obsCode2._to_string()
+        enum_to_string(obsCode1),
+        enum_to_string(obsCode2)
     );
 
     BiasEntry foundBias;
     bool      pass = getBiasEntry(trace, time, id, measType, foundBias, obsCode1, obsCode2);
-    if (pass == false)
+    if (pass == false || isnan(foundBias.bias))
     {
-        tracepdeex(3, trace, " Not found,          var: %5.1f", var);
+        tracepdeex(3, trace, " Not found...");
         return false;
     }
 
     bias = foundBias.bias;
-    var  = foundBias.var;
+    var  = (isnan(foundBias.var) ? 0 : foundBias.var);
+
     tracepdeex(3, trace, " Found: %11.4f, var: %5.1f from %s", bias, var, foundBias.source.c_str());
 
     return true;
