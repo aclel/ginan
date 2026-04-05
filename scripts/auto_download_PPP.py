@@ -16,6 +16,7 @@ from typing import Tuple
 from urllib.parse import urlparse
 from contextlib import contextmanager
 from datetime import datetime, timedelta
+import threading
 from concurrent.futures import ThreadPoolExecutor, as_completed
 
 from gnssanalysis.gn_datetime import GPSDate
@@ -36,6 +37,18 @@ from gnssanalysis.gn_utils import configure_logging, ensure_folders
 API_URL = "https://data.gnss.ga.gov.au/api"
 CDDIS_RINEX_BASE = "https://cddis.nasa.gov/archive/gnss/data/daily"
 _RINEX3_OBS_RE = re.compile(r"^[A-Z0-9]{9}_[RSU]_\d{11}_01D_\d+[SMHD]_MO\.crx\.gz$", re.IGNORECASE)
+
+_cddis_thread_local = threading.local()
+
+
+def _get_cddis_session(username: str, password: str) -> requests.Session:
+    """Return a thread-local requests session for CDDIS, creating it on first use per thread."""
+    if not hasattr(_cddis_thread_local, "session"):
+        session = requests.Session()
+        session.auth = (username, password)
+        session.max_redirects = 10
+        _cddis_thread_local.session = session
+    return _cddis_thread_local.session
 
 
 @contextmanager
@@ -663,24 +676,27 @@ def _cddis_download_worker(
 ) -> tuple:
     """
     Download one RINEX file from CDDIS as .crx.gz (decompression handled separately).
+    Uses a thread-local session to reuse connections and avoid per-file auth overhead.
     Returns (station_4char, date_str, filepath_or_None).
     """
     output_dir = _resolve_output_dir(date_str, data_dir, work_root)
+    output_dir.mkdir(parents=True, exist_ok=True)
+
+    session = _get_cddis_session(username, password)
     try:
-        filepath = download_file_from_cddis(
+        result = download_file_from_cddis(
             filename=filename,
             url_folder=url_folder,
             output_folder=output_dir,
+            max_retries=3,
             decompress=False,
             if_file_present=if_file_present,
-            note_filetype="RINEX obs",
-            username=username,
-            password=password,
+            session=session,
         )
-        return station_4char, date_str, filepath
     except Exception as e:
-        logging.warning(f"CDDIS download failed for {filename}: {e}")
+        logging.error(f"CDDIS: gave up on {filename}: {e}")
         return station_4char, date_str, None
+    return station_4char, date_str, result
 
 
 def _resolve_output_dir(date_str: str, data_dir: Path, work_root: Path) -> Path:
