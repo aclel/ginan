@@ -618,7 +618,7 @@ def _find_station_in_listing(station_4char: str, filenames: list) -> str:
     return preferred[0] if preferred else matches[0]
 
 
-def _ga_download_worker(entry: dict, output_dir: Path, if_file_present: str) -> tuple:
+def _ga_download_worker(entry: dict, data_dir: Path, if_file_present: str, work_root: Path = None) -> tuple:
     """
     Download one file from a GA API response entry.
     Returns (station_4char, date_str, filepath_or_None).
@@ -634,6 +634,7 @@ def _ga_download_worker(entry: dict, output_dir: Path, if_file_present: str) -> 
     except (IndexError, ValueError):
         date_str = "unknown"
 
+    output_dir = _resolve_output_dir(date_str, data_dir, work_root)
     filename = raw_name
     try:
         filepath = attempt_url_download(
@@ -652,17 +653,19 @@ def _ga_download_worker(entry: dict, output_dir: Path, if_file_present: str) -> 
 def _cddis_download_worker(
     filename: str,
     url_folder: str,
-    output_dir: Path,
+    data_dir: Path,
     station_4char: str,
     date_str: str,
     username: str,
     password: str,
     if_file_present: str = "prompt_user",
+    work_root: Path = None,
 ) -> tuple:
     """
     Download one RINEX file from CDDIS as .crx.gz (decompression handled separately).
     Returns (station_4char, date_str, filepath_or_None).
     """
+    output_dir = _resolve_output_dir(date_str, data_dir, work_root)
     try:
         filepath = download_file_from_cddis(
             filename=filename,
@@ -680,7 +683,16 @@ def _cddis_download_worker(
         return station_4char, date_str, None
 
 
-def _scan_existing_files(stations: list, start_epoch: datetime, end_epoch: datetime, data_dir: Path) -> set:
+def _resolve_output_dir(date_str: str, data_dir: Path, work_root: Path) -> Path:
+    """Return the output directory for a given date, creating it if needed."""
+    if work_root:
+        d = work_root / date_str / "data"
+        d.mkdir(parents=True, exist_ok=True)
+        return d
+    return data_dir
+
+
+def _scan_existing_files(stations: list, start_epoch: datetime, end_epoch: datetime, data_dir: Path = None, work_root: Path = None) -> set:
     """
     Scan data_dir for already-present RINEX files (.crx.gz or .rnx).
     Returns a set of (station_4char, date_str) pairs that already have a file on disk.
@@ -691,11 +703,13 @@ def _scan_existing_files(stations: list, start_epoch: datetime, end_epoch: datet
     station_set = {s.upper() for s in stations}
     while current <= end:
         date_str = current.strftime("%Y-%m-%d")
-        for pattern in ("*.crx.gz", "*.rnx"):
-            for f in data_dir.glob(pattern):
-                code = f.name[:4].upper()
-                if code in station_set:
-                    existing.add((code, date_str))
+        scan_dir = _resolve_output_dir(date_str, data_dir, work_root)
+        if scan_dir.exists():
+            for pattern in ("*.crx.gz", "*.rnx"):
+                for f in scan_dir.glob(pattern):
+                    code = f.name[:4].upper()
+                    if code in station_set:
+                        existing.add((code, date_str))
         current += timedelta(days=1)
     return existing
 
@@ -720,6 +734,7 @@ def _download_rinex_from_ga(
     rinex_version: int,
     if_file_present: str,
     max_workers: int,
+    work_root: Path = None,
 ) -> tuple:
     """
     Query the GA API and download all available obs files in parallel.
@@ -749,7 +764,7 @@ def _download_rinex_from_ga(
     ga_downloaded = set()
     provenance = []
     with ThreadPoolExecutor(max_workers=max_workers) as executor:
-        futures = {executor.submit(_ga_download_worker, entry, data_dir, if_file_present): entry for entry in entries}
+        futures = {executor.submit(_ga_download_worker, entry, data_dir, if_file_present, work_root): entry for entry in entries}
         for future in as_completed(futures):
             station, date_str, filepath = future.result()
             if filepath:
@@ -782,7 +797,7 @@ def _prefetch_cddis_listings(
 
 
 def _download_rinex_from_cddis(
-    missing_pairs: set, all_listings: dict, data_dir: Path, username: str, password: str, max_workers: int, if_file_present: str = "prompt_user"
+    missing_pairs: set, all_listings: dict, data_dir: Path, username: str, password: str, max_workers: int, if_file_present: str = "prompt_user", work_root: Path = None
 ) -> list:
     """
     Build download tasks from the CDDIS listings (skipping stations not in any listing
@@ -810,7 +825,7 @@ def _download_rinex_from_cddis(
     cddis_ok = 0
     with ThreadPoolExecutor(max_workers=max_workers) as executor:
         futures = {
-            executor.submit(_cddis_download_worker, fname, url_folder, data_dir, station, date_str, username, password, if_file_present): (
+            executor.submit(_cddis_download_worker, fname, url_folder, data_dir, station, date_str, username, password, if_file_present, work_root): (
                 station,
                 date_str,
             )
@@ -837,6 +852,7 @@ def download_rinex_obs(
     max_workers: int = 8,
     decompress: bool = False,
     delete_compressed: bool = False,
+    dated_dirs: bool = False,
 ) -> None:
     """
     Download RINEX obs files for a list of stations from GA API and/or CDDIS.
@@ -852,15 +868,16 @@ def download_rinex_obs(
     ensure_folders([data_dir])
     stations_upper = [s.upper() for s in station_list]
     provenance = []
+    work_root = data_dir if dated_dirs else None
 
     # Pre-scan disk for files from previous runs so dont-replace skips are accounted for
-    already_on_disk = _scan_existing_files(stations_upper, start_epoch, end_epoch, data_dir)
+    already_on_disk = _scan_existing_files(stations_upper, start_epoch, end_epoch, data_dir, work_root)
 
     # Phase 1: GA
     ga_downloaded = set()
     if source in ("ga", "both"):
         ga_downloaded, ga_provenance = _download_rinex_from_ga(
-            stations_upper, start_epoch, end_epoch, data_dir, file_period, rinex_version, if_file_present, max_workers
+            stations_upper, start_epoch, end_epoch, data_dir, file_period, rinex_version, if_file_present, max_workers, work_root
         )
         provenance.extend(ga_provenance)
         ga_downloaded |= already_on_disk
@@ -912,16 +929,17 @@ def download_rinex_obs(
                 if source == "both":
                     logging.info(f"CDDIS: {len(missing_pairs)} station-days missing from GA")
                 missing_dates = sorted({d for _, d in missing_pairs})
-                cache_dir = data_dir / ".cddis_listings"
+                cache_dir = (work_root if work_root else data_dir) / ".cddis_listings"
                 all_listings = _prefetch_cddis_listings(missing_dates, username, password, cache_dir, max_workers)
                 cddis_provenance = _download_rinex_from_cddis(
-                    missing_pairs, all_listings, data_dir, username, password, max_workers, if_file_present
+                    missing_pairs, all_listings, data_dir, username, password, max_workers, if_file_present, work_root
                 )
                 provenance.extend(cddis_provenance)
 
     # Decompress .crx.gz files if requested
     if decompress:
-        gz_files = list(data_dir.glob("*.crx.gz"))
+        search_root = work_root if work_root else data_dir
+        gz_files = list(search_root.rglob("*.crx.gz"))
         if gz_files:
             logging.info(f"Decompressing {len(gz_files)} .crx.gz files")
             for gz_file in gz_files:
@@ -932,7 +950,8 @@ def download_rinex_obs(
 
     # Write provenance log
     if provenance:
-        log_path = data_dir / "rinex_provenance.csv"
+        log_root = work_root if work_root else data_dir
+        log_path = log_root / "rinex_provenance.csv"
         _write_provenance_log(provenance, log_path)
         logging.info(f"Provenance log: {log_path} ({len(provenance)} entries)")
     else:
@@ -994,6 +1013,7 @@ def auto_download(
     rinex_workers: int,
     decompress: bool,
     delete_compressed: bool,
+    rinex_dated_dirs: bool,
     verbose: bool,
 ) -> None:
     configure_logging(verbose)
@@ -1316,6 +1336,7 @@ def auto_download(
                 max_workers=rinex_workers,
                 decompress=decompress,
                 delete_compressed=delete_compressed,
+                dated_dirs=rinex_dated_dirs,
             ))
 
         # Wait for all
@@ -1439,6 +1460,7 @@ def auto_download(
 )
 @click.option("--decompress", is_flag=True, help="Decompress .crx.gz RINEX files after download")
 @click.option("--delete-compressed", is_flag=True, help="Delete .crx.gz files after decompressing (requires --decompress)")
+@click.option("--rinex-dated-dirs", is_flag=True, help="Download RINEX obs files into dated subdirectories: {rinex-data-dir}/YYYY-MM-DD/data/")
 @click.option("--verbose", is_flag=True)
 def auto_download_main(
     target_dir,
@@ -1484,6 +1506,7 @@ def auto_download_main(
     rinex_workers,
     decompress,
     delete_compressed,
+    rinex_dated_dirs,
     verbose,
 ):
     try:
@@ -1538,6 +1561,7 @@ def auto_download_main(
         rinex_workers,
         decompress,
         delete_compressed,
+        rinex_dated_dirs,
         verbose,
     )
 
