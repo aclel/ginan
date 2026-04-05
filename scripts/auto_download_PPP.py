@@ -984,7 +984,7 @@ def auto_download(
 @click.option("--analysis-center", help="Analysis center of files to download", default="IGS", type=str)
 @click.option("--atx", help="Flag to Download ATX file", default=False, is_flag=True)
 @click.option("--aload", help="Flag to Download Atmospheric Loading file", default=False, is_flag=True)
-@click.option("--igrf", help="Flag to Download IGRF13 file", default=False, is_flag=True)
+@click.option("--igrf", help="Flag to Download IGRF14 file", default=False, is_flag=True)
 @click.option("--egm", help="Flag to Download EGM2008 file", default=False, is_flag=True)
 @click.option("--oload", help="Flag to Download Ocean Tide Loading file", default=False, is_flag=True)
 @click.option("--opole", help="Flag to Download Ocean Pole Tide Coefficients", default=False, is_flag=True)
