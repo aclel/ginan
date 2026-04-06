@@ -905,10 +905,22 @@ def download_rinex_obs(
     # Phase 1: GA
     ga_downloaded = set()
     if source in ("ga", "both"):
-        ga_downloaded, ga_provenance = _download_rinex_from_ga(
-            stations_upper, start_epoch, end_epoch, data_dir, file_period, rinex_version, if_file_present, max_workers, work_root
-        )
-        provenance.extend(ga_provenance)
+        current = start_epoch.replace(hour=0, minute=0, second=0, microsecond=0)
+        end_day = end_epoch.replace(hour=0, minute=0, second=0, microsecond=0)
+        all_pairs = {
+            (s, (current + timedelta(days=i)).strftime("%Y-%m-%d"))
+            for s in stations_upper
+            for i in range((end_day - current).days + 1)
+        }
+        missing_pairs = all_pairs - already_on_disk
+        if not missing_pairs:
+            logging.info("GA: all files already on disk, skipping API query")
+        else:
+            logging.info(f"GA: {len(already_on_disk)} station-days already on disk, querying for {len(missing_pairs)} missing")
+            ga_downloaded, ga_provenance = _download_rinex_from_ga(
+                stations_upper, start_epoch, end_epoch, data_dir, file_period, rinex_version, if_file_present, max_workers, work_root
+            )
+            provenance.extend(ga_provenance)
         ga_downloaded |= already_on_disk
 
         if source == "ga":
