@@ -46,14 +46,14 @@ def _get_cddis_session(username: str, password: str, pool_size: int = 4) -> requ
     """Return a thread-local requests session for CDDIS, creating it on first use per thread.
 
     Prefers Bearer token auth (no OAuth redirects) over username/password.
-    Token is read from .netrc account field for urs.earthdata.nasa.gov.
+    Token is read from the EARTHDATA_TOKEN environment variable (earthaccess convention).
     """
     if not hasattr(_cddis_thread_local, "session"):
         from requests.adapters import HTTPAdapter
         session = requests.Session()
         token = get_earthdata_token()
         if token:
-            logging.debug("CDDIS session: using Bearer token auth")
+            logging.debug("CDDIS session: using Bearer token (EARTHDATA_TOKEN)")
             session.headers["Authorization"] = f"Bearer {token}"
         else:
             logging.debug("CDDIS session: using username/password auth")
