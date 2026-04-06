@@ -764,30 +764,50 @@ def _download_rinex_from_ga(
     if_file_present: str,
     max_workers: int,
     work_root: Path = None,
+    already_on_disk: set = None,
 ) -> tuple:
     """
     Query the GA API and download all available obs files in parallel.
     Does not filter by metadataStatus so files with invalid metadata are included.
     Returns (ga_downloaded: set of (station, date_str), provenance: list).
     """
-    logging.info(f"GA: Querying API for {len(station_list)} stations")
-    try:
+    # Query one day at a time to avoid gateway timeouts.
+    # Skip days where all stations are already on disk.
+    already_on_disk = already_on_disk or set()
+    entries = []
+    current = start_epoch.replace(hour=0, minute=0, second=0, microsecond=0)
+    end_day = end_epoch.replace(hour=0, minute=0, second=0, microsecond=0)
+    num_days = (end_day - current).days + 1
+    logging.info(f"GA: Querying API for {len(station_list)} stations over {num_days} day(s)")
+    skipped = 0
+    while current <= end_day:
+        next_day = current + timedelta(days=1)
+        date_str = current.strftime("%Y-%m-%d")
+        if all((s, date_str) in already_on_disk for s in station_list):
+            skipped += 1
+            current = next_day
+            continue
         params = {
             "stationId": ",".join(station_list),
             "fileType": "obs",
             "rinexVersion": rinex_version,
             "filePeriod": file_period,
             "decompress": "false",
-            "startDate": start_epoch.strftime("%Y-%m-%dT%H:%M:%SZ"),
-            "endDate": end_epoch.strftime("%Y-%m-%dT%H:%M:%SZ"),
+            "startDate": current.strftime("%Y-%m-%dT%H:%M:%SZ"),
+            "endDate": next_day.strftime("%Y-%m-%dT%H:%M:%SZ"),
             "tenantId": "default",
         }
-        resp = requests.get(API_URL + "/rinexFiles", params=params)
-        resp.raise_for_status()
-        entries = json.loads(resp.content)
-    except requests.RequestException as e:
-        logging.error(f"GA API query failed: {e}")
-        return set(), []
+        try:
+            resp = requests.get(API_URL + "/rinexFiles", params=params, timeout=60)
+            resp.raise_for_status()
+            day_entries = json.loads(resp.content)
+            entries.extend(day_entries)
+            logging.debug(f"GA: {current.date()}: {len(day_entries)} files")
+        except requests.RequestException as e:
+            logging.warning(f"GA API query failed for {current.date()}: {e}")
+        current = next_day
+    if skipped:
+        logging.info(f"GA: Skipped {skipped}/{num_days} days (all stations already on disk)")
 
     logging.info(f"GA: {len(entries)} files available, downloading with {max_workers} workers")
     ga_downloaded = set()
@@ -918,7 +938,8 @@ def download_rinex_obs(
         else:
             logging.info(f"GA: {len(already_on_disk)} station-days already on disk, querying for {len(missing_pairs)} missing")
             ga_downloaded, ga_provenance = _download_rinex_from_ga(
-                stations_upper, start_epoch, end_epoch, data_dir, file_period, rinex_version, if_file_present, max_workers, work_root
+                stations_upper, start_epoch, end_epoch, data_dir, file_period, rinex_version, if_file_present, max_workers, work_root,
+                already_on_disk=already_on_disk,
             )
             provenance.extend(ga_provenance)
         ga_downloaded |= already_on_disk
