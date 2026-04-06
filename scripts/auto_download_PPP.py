@@ -802,7 +802,7 @@ def _download_rinex_from_ga(
             resp.raise_for_status()
             day_entries = json.loads(resp.content)
             entries.extend(day_entries)
-            logging.debug(f"GA: {current.date()}: {len(day_entries)} files")
+            logging.info(f"GA: {current.date()}: {len(day_entries)} files")
         except requests.RequestException as e:
             logging.warning(f"GA API query failed for {current.date()}: {e}")
         current = next_day
