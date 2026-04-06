@@ -754,6 +754,18 @@ def _write_provenance_log(provenance: list, log_path: Path) -> None:
             writer.writerow([station, date_str, filepath.name if filepath else "", source])
 
 
+def _ga_entry_key(entry: dict):
+    """Return (station_4char, date_str) for a GA API entry, or None if unparseable."""
+    raw = urlparse(entry["fileLocation"]).path.split("/")[-1]
+    station = raw[:4].upper()
+    try:
+        epoch = raw.split("_")[2]
+        date_str = (datetime(int(epoch[:4]), 1, 1) + timedelta(days=int(epoch[4:7]) - 1)).strftime("%Y-%m-%d")
+    except (IndexError, ValueError):
+        return None
+    return (station, date_str)
+
+
 def _download_rinex_from_ga(
     station_list: list,
     start_epoch: datetime,
@@ -764,12 +776,14 @@ def _download_rinex_from_ga(
     if_file_present: str,
     max_workers: int,
     work_root: Path = None,
+    already_on_disk: set = None,
 ) -> tuple:
     """
     Query the GA API and download all available obs files in parallel.
     Does not filter by metadataStatus so files with invalid metadata are included.
     Returns (ga_downloaded: set of (station, date_str), provenance: list).
     """
+    already_on_disk = already_on_disk or set()
     logging.info(f"GA: Querying API for {len(station_list)} stations")
     try:
         params = {
@@ -789,7 +803,8 @@ def _download_rinex_from_ga(
         logging.error(f"GA API query failed: {e}")
         return set(), []
 
-    logging.info(f"GA: {len(entries)} files available, downloading with {max_workers} workers")
+    entries = [e for e in entries if _ga_entry_key(e) not in already_on_disk]
+    logging.info(f"GA: {len(entries)} files to download, using {max_workers} workers")
     ga_downloaded = set()
     provenance = []
     with ThreadPoolExecutor(max_workers=max_workers) as executor:
@@ -918,7 +933,8 @@ def download_rinex_obs(
         else:
             logging.info(f"GA: {len(already_on_disk)} station-days already on disk, querying for {len(missing_pairs)} missing")
             ga_downloaded, ga_provenance = _download_rinex_from_ga(
-                stations_upper, start_epoch, end_epoch, data_dir, file_period, rinex_version, if_file_present, max_workers, work_root
+                stations_upper, start_epoch, end_epoch, data_dir, file_period, rinex_version, if_file_present, max_workers, work_root,
+                already_on_disk=already_on_disk,
             )
             provenance.extend(ga_provenance)
         ga_downloaded |= already_on_disk
