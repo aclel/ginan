@@ -16,7 +16,6 @@ from typing import Tuple
 from urllib.parse import urlparse
 from contextlib import contextmanager
 from datetime import datetime, timedelta
-import threading
 from concurrent.futures import ThreadPoolExecutor, as_completed
 
 from gnssanalysis.gn_datetime import GPSDate
@@ -28,7 +27,6 @@ from gnssanalysis.gn_download import (
     generate_product_filename,
     download_file_from_cddis,
     get_earthdata_credentials,
-    get_earthdata_token,
     check_whether_to_download,
     attempt_url_download,
     long_filename_cddis_cutoff,
@@ -38,32 +36,6 @@ from gnssanalysis.gn_utils import configure_logging, ensure_folders
 API_URL = "https://data.gnss.ga.gov.au/api"
 CDDIS_RINEX_BASE = "https://cddis.nasa.gov/archive/gnss/data/daily"
 _RINEX3_OBS_RE = re.compile(r"^[A-Z0-9]{9}_[RSU]_\d{11}_01D_\d+[SMHD]_MO\.crx\.gz$", re.IGNORECASE)
-
-_cddis_thread_local = threading.local()
-
-
-def _get_cddis_session(username: str, password: str, pool_size: int = 4) -> requests.Session:
-    """Return a thread-local requests session for CDDIS, creating it on first use per thread.
-
-    Prefers Bearer token auth (no OAuth redirects) over username/password.
-    Token is read from the EARTHDATA_TOKEN environment variable (earthaccess convention).
-    """
-    if not hasattr(_cddis_thread_local, "session"):
-        from requests.adapters import HTTPAdapter
-        session = requests.Session()
-        token = get_earthdata_token()
-        if token:
-            logging.debug("CDDIS session: using Bearer token (EARTHDATA_TOKEN)")
-            session.headers["Authorization"] = f"Bearer {token}"
-        else:
-            logging.debug("CDDIS session: using username/password auth")
-            session.auth = (username, password)
-            session.max_redirects = 10
-        adapter = HTTPAdapter(pool_connections=2, pool_maxsize=pool_size)
-        session.mount("https://", adapter)
-        session.mount("http://", adapter)
-        _cddis_thread_local.session = session
-    return _cddis_thread_local.session
 
 
 @contextmanager
@@ -598,11 +570,10 @@ def _cddis_list_date(date: datetime, username: str, password: str, cache_dir: Pa
             return json.load(f)
 
     url = f"{CDDIS_RINEX_BASE}/{date.year}/{doy:03d}/{date.strftime('%y')}d/*?list"
-    session = _get_cddis_session(username, password)
 
     for attempt in range(3):
         try:
-            resp = session.get(url, timeout=60)
+            resp = requests.get(url, auth=(username, password), timeout=60)
             if resp.status_code == 404:
                 result = []
                 cache_file.write_text(json.dumps(result))
@@ -689,13 +660,11 @@ def _cddis_download_worker(
 ) -> tuple:
     """
     Download one RINEX file from CDDIS as .crx.gz (decompression handled separately).
-    Uses a thread-local session to reuse connections and avoid per-file auth overhead.
     Returns (station_4char, date_str, filepath_or_None).
     """
     output_dir = _resolve_output_dir(date_str, data_dir, work_root)
     output_dir.mkdir(parents=True, exist_ok=True)
 
-    session = _get_cddis_session(username, password)
     try:
         result = download_file_from_cddis(
             filename=filename,
@@ -704,7 +673,8 @@ def _cddis_download_worker(
             max_retries=3,
             decompress=False,
             if_file_present=if_file_present,
-            session=session,
+            username=username,
+            password=password,
         )
     except Exception as e:
         logging.error(f"CDDIS: gave up on {filename}: {e}")
