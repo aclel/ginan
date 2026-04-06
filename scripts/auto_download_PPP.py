@@ -28,6 +28,7 @@ from gnssanalysis.gn_download import (
     generate_product_filename,
     download_file_from_cddis,
     get_earthdata_credentials,
+    get_earthdata_token,
     check_whether_to_download,
     attempt_url_download,
     long_filename_cddis_cutoff,
@@ -41,12 +42,26 @@ _RINEX3_OBS_RE = re.compile(r"^[A-Z0-9]{9}_[RSU]_\d{11}_01D_\d+[SMHD]_MO\.crx\.g
 _cddis_thread_local = threading.local()
 
 
-def _get_cddis_session(username: str, password: str) -> requests.Session:
-    """Return a thread-local requests session for CDDIS, creating it on first use per thread."""
+def _get_cddis_session(username: str, password: str, pool_size: int = 4) -> requests.Session:
+    """Return a thread-local requests session for CDDIS, creating it on first use per thread.
+
+    Prefers Bearer token auth (no OAuth redirects) over username/password.
+    Token is read from .netrc account field for urs.earthdata.nasa.gov.
+    """
     if not hasattr(_cddis_thread_local, "session"):
+        from requests.adapters import HTTPAdapter
         session = requests.Session()
-        session.auth = (username, password)
-        session.max_redirects = 10
+        token = get_earthdata_token()
+        if token:
+            logging.debug("CDDIS session: using Bearer token auth")
+            session.headers["Authorization"] = f"Bearer {token}"
+        else:
+            logging.debug("CDDIS session: using username/password auth")
+            session.auth = (username, password)
+            session.max_redirects = 10
+        adapter = HTTPAdapter(pool_connections=2, pool_maxsize=pool_size)
+        session.mount("https://", adapter)
+        session.mount("http://", adapter)
         _cddis_thread_local.session = session
     return _cddis_thread_local.session
 
@@ -583,9 +598,7 @@ def _cddis_list_date(date: datetime, username: str, password: str, cache_dir: Pa
             return json.load(f)
 
     url = f"{CDDIS_RINEX_BASE}/{date.year}/{doy:03d}/{date.strftime('%y')}d/*?list"
-    session = requests.Session()
-    session.auth = (username, password)
-    session.max_redirects = 10
+    session = _get_cddis_session(username, password)
 
     for attempt in range(3):
         try:
