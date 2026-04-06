@@ -770,33 +770,24 @@ def _download_rinex_from_ga(
     Does not filter by metadataStatus so files with invalid metadata are included.
     Returns (ga_downloaded: set of (station, date_str), provenance: list).
     """
-    # Query one day at a time to avoid gateway timeouts with large station lists
-    entries = []
-    current = start_epoch.replace(hour=0, minute=0, second=0, microsecond=0)
-    end = end_epoch.replace(hour=0, minute=0, second=0, microsecond=0)
-    num_days = (end - current).days + 1
-    logging.info(f"GA: Querying API for {len(station_list)} stations over {num_days} day(s)")
-    while current <= end:
-        next_day = current + timedelta(days=1)
+    logging.info(f"GA: Querying API for {len(station_list)} stations")
+    try:
         params = {
             "stationId": ",".join(station_list),
             "fileType": "obs",
             "rinexVersion": rinex_version,
             "filePeriod": file_period,
             "decompress": "false",
-            "startDate": current.strftime("%Y-%m-%dT%H:%M:%SZ"),
-            "endDate": next_day.strftime("%Y-%m-%dT%H:%M:%SZ"),
+            "startDate": start_epoch.strftime("%Y-%m-%dT%H:%M:%SZ"),
+            "endDate": end_epoch.strftime("%Y-%m-%dT%H:%M:%SZ"),
             "tenantId": "default",
         }
-        try:
-            resp = requests.get(API_URL + "/rinexFiles", params=params, timeout=60)
-            resp.raise_for_status()
-            day_entries = json.loads(resp.content)
-            entries.extend(day_entries)
-            logging.debug(f"GA: {current.date()}: {len(day_entries)} files")
-        except requests.RequestException as e:
-            logging.warning(f"GA API query failed for {current.date()}: {e}")
-        current = next_day
+        resp = requests.get(API_URL + "/rinexFiles", params=params)
+        resp.raise_for_status()
+        entries = json.loads(resp.content)
+    except requests.RequestException as e:
+        logging.error(f"GA API query failed: {e}")
+        return set(), []
 
     logging.info(f"GA: {len(entries)} files available, downloading with {max_workers} workers")
     ga_downloaded = set()
