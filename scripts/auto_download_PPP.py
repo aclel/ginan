@@ -977,12 +977,15 @@ def download_rinex_obs(
                 except Exception as e:
                     logging.warning(f"Failed to decompress {gz_file.name}: {e}")
 
-    # Write provenance log
+    # Write per-date provenance logs into each dated dir (or flat data_dir if no dated dirs)
     if provenance:
-        log_root = work_root if work_root else data_dir
-        log_path = log_root / "rinex_provenance.csv"
-        _write_provenance_log(provenance, log_path)
-        logging.info(f"Provenance log: {log_path} ({len(provenance)} entries)")
+        by_date = {}
+        for entry in provenance:
+            by_date.setdefault(entry[1], []).append(entry)
+        for date_str, date_entries in by_date.items():
+            log_dir = _resolve_output_dir(date_str, data_dir, work_root)
+            _write_provenance_log(date_entries, log_dir / "rinex_provenance.csv")
+        logging.info(f"Provenance logs written for {len(by_date)} date(s) ({len(provenance)} entries total)")
     else:
         logging.warning(f"No RINEX obs files downloaded for any of the {len(stations_upper)} requested stations")
 
