@@ -784,24 +784,37 @@ def _download_rinex_from_ga(
     Returns (ga_downloaded: set of (station, date_str), provenance: list).
     """
     already_on_disk = already_on_disk or set()
-    logging.info(f"GA: Querying API for {len(station_list)} stations")
-    try:
-        params = {
-            "stationId": ",".join(station_list),
-            "fileType": "obs",
-            "rinexVersion": rinex_version,
-            "filePeriod": file_period,
-            "decompress": "false",
-            "startDate": start_epoch.strftime("%Y-%m-%dT%H:%M:%SZ"),
-            "endDate": end_epoch.strftime("%Y-%m-%dT%H:%M:%SZ"),
-            "tenantId": "default",
-        }
-        resp = requests.get(API_URL + "/rinexFiles", params=params)
-        resp.raise_for_status()
-        entries = json.loads(resp.content)
-    except requests.RequestException as e:
-        logging.error(f"GA API query failed: {e}")
-        return set(), []
+
+    # Build monthly chunks to avoid gateway timeouts over long date ranges
+    chunks = []
+    chunk_start = start_epoch.replace(day=1, hour=0, minute=0, second=0, microsecond=0)
+    while chunk_start <= end_epoch:
+        next_month = (chunk_start.replace(day=28) + timedelta(days=4)).replace(day=1)
+        chunk_end = min(next_month, end_epoch)
+        chunks.append((max(chunk_start, start_epoch), chunk_end))
+        chunk_start = next_month
+
+    logging.info(f"GA: Querying API for {len(station_list)} stations in {len(chunks)} monthly chunk(s)")
+    entries = []
+    for chunk_start, chunk_end in chunks:
+        try:
+            params = {
+                "stationId": ",".join(station_list),
+                "fileType": "obs",
+                "rinexVersion": rinex_version,
+                "filePeriod": file_period,
+                "decompress": "false",
+                "startDate": chunk_start.strftime("%Y-%m-%dT%H:%M:%SZ"),
+                "endDate": chunk_end.strftime("%Y-%m-%dT%H:%M:%SZ"),
+                "tenantId": "default",
+            }
+            resp = requests.get(API_URL + "/rinexFiles", params=params, timeout=60)
+            resp.raise_for_status()
+            chunk_entries = json.loads(resp.content)
+            entries.extend(chunk_entries)
+            logging.info(f"GA: {chunk_start.strftime('%Y-%m')}: {len(chunk_entries)} files")
+        except requests.RequestException as e:
+            logging.warning(f"GA API query failed for {chunk_start.strftime('%Y-%m')}: {e}")
 
     entries = [e for e in entries if _ga_entry_key(e) not in already_on_disk]
     logging.info(f"GA: {len(entries)} files to download, using {max_workers} workers")
