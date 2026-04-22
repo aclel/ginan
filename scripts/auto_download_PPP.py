@@ -1,5 +1,6 @@
 # Script for auto-downloading the necessary files to run PPP solutions in Ginan
 # import boto3
+import hashlib
 import os
 import re
 import csv
@@ -602,6 +603,49 @@ def _cddis_list_date(date: datetime, username: str, password: str, cache_dir: Pa
     return []
 
 
+def _verify_sha512(path: Path, expected_hex: str) -> bool:
+    """Return True if the file's SHA512 matches expected_hex."""
+    h = hashlib.sha512()
+    with open(path, "rb") as f:
+        for chunk in iter(lambda: f.read(65536), b""):
+            h.update(chunk)
+    return h.hexdigest() == expected_hex.lower()
+
+
+def _cddis_fetch_sha512(date: datetime, username: str, password: str, cache_dir: Path) -> dict:
+    """
+    Fetch and cache SHA512SUMS for a CDDIS RINEX date.
+    Returns {filename: hex_digest}. Empty dict on error or 404 (verification skipped).
+    """
+    doy = date.timetuple().tm_yday
+    cache_file = cache_dir / f"{date.year}{doy:03d}_sha512.json"
+    if cache_file.exists():
+        with open(cache_file) as f:
+            return json.load(f)
+
+    url = f"{CDDIS_RINEX_BASE}/{date.year}/{doy:03d}/{date.strftime('%y')}d/SHA512SUMS"
+    try:
+        resp = requests.get(url, auth=(username, password), timeout=30)
+        if resp.status_code == 404:
+            cache_file.write_text(json.dumps({}))
+            return {}
+        if resp.status_code in (401, 403):
+            logging.warning(f"CDDIS auth error fetching SHA512SUMS for {date.date()}")
+            return {}
+        resp.raise_for_status()
+        checksums = {}
+        for line in resp.text.strip().split("\n"):
+            parts = line.split()
+            if len(parts) >= 2:
+                checksums[parts[1].lstrip("*")] = parts[0]
+        cache_file.write_text(json.dumps(checksums))
+        logging.debug(f"SHA512SUMS {date.date()}: {len(checksums)} entries")
+        return checksums
+    except requests.RequestException as e:
+        logging.warning(f"Could not fetch SHA512SUMS for {date.date()}: {e}")
+        return {}
+
+
 def _find_station_in_listing(station_4char: str, filenames: list) -> str:
     """
     Find the best RINEX obs file for a station from a CDDIS directory listing.
@@ -657,9 +701,11 @@ def _cddis_download_worker(
     password: str,
     if_file_present: str = "prompt_user",
     work_root: Path = None,
+    expected_hash: str = None,
 ) -> tuple:
     """
     Download one RINEX file from CDDIS as .crx.gz (decompression handled separately).
+    Verifies SHA512 if expected_hash is provided; deletes corrupt file and returns None on mismatch.
     Returns (station_4char, date_str, filepath_or_None).
     """
     output_dir = _resolve_output_dir(date_str, data_dir, work_root)
@@ -679,6 +725,14 @@ def _cddis_download_worker(
     except Exception as e:
         logging.error(f"CDDIS: gave up on {filename}: {e}")
         return station_4char, date_str, None
+
+    if result and expected_hash:
+        if not _verify_sha512(result, expected_hash):
+            logging.error(f"CDDIS: SHA512 mismatch for {filename} — deleting corrupt file")
+            Path(result).unlink(missing_ok=True)
+            return station_4char, date_str, None
+        logging.debug(f"CDDIS: SHA512 OK for {filename}")
+
     return station_4char, date_str, result
 
 
@@ -801,34 +855,40 @@ def _download_rinex_from_ga(
     return ga_downloaded, provenance
 
 
-def _prefetch_cddis_listings(
+def _prefetch_cddis_metadata(
     missing_dates: list, username: str, password: str, cache_dir: Path, max_workers: int
-) -> dict:
+) -> tuple:
     """
-    Concurrently fetch CDDIS directory listings for each date that still has missing stations.
-    Results are cached to disk so reruns only fetch what's not already cached.
-    Returns dict mapping date_str -> list of available filenames.
+    Concurrently fetch CDDIS directory listings and SHA512SUMS for each date.
+    Results are disk-cached so reruns only fetch what's missing.
+    Returns (all_listings, all_checksums): dicts mapping date_str -> data.
     """
     cache_dir.mkdir(parents=True, exist_ok=True)
     all_listings = {}
+    all_checksums = {}
+
+    def _fetch_one(date_str):
+        dt = datetime.strptime(date_str, "%Y-%m-%d")
+        return date_str, _cddis_list_date(dt, username, password, cache_dir), _cddis_fetch_sha512(dt, username, password, cache_dir)
+
     with ThreadPoolExecutor(max_workers=min(max_workers, len(missing_dates))) as executor:
-        futures = {
-            executor.submit(_cddis_list_date, datetime.strptime(d, "%Y-%m-%d"), username, password, cache_dir): d
-            for d in missing_dates
-        }
+        futures = {executor.submit(_fetch_one, d): d for d in missing_dates}
         for future in as_completed(futures):
-            date_str = futures[future]
-            all_listings[date_str] = future.result()
-    logging.info(f"CDDIS: Listings fetched for {len(missing_dates)} dates")
-    return all_listings
+            date_str, listing, checksums = future.result()
+            all_listings[date_str] = listing
+            all_checksums[date_str] = checksums
+
+    logging.info(f"CDDIS: Metadata fetched for {len(missing_dates)} dates")
+    return all_listings, all_checksums
 
 
 def _download_rinex_from_cddis(
-    missing_pairs: set, all_listings: dict, data_dir: Path, username: str, password: str, max_workers: int, if_file_present: str = "prompt_user", work_root: Path = None
+    missing_pairs: set, all_listings: dict, all_checksums: dict, data_dir: Path, username: str, password: str, max_workers: int, if_file_present: str = "prompt_user", work_root: Path = None
 ) -> list:
     """
     Build download tasks from the CDDIS listings (skipping stations not in any listing
     to avoid wasted requests), then download in a single parallel pool.
+    SHA512 is verified for each file if a checksum is available.
     Returns provenance list of (station, date_str, filepath, 'cddis').
     """
     tasks = []
@@ -840,7 +900,8 @@ def _download_rinex_from_cddis(
         fname = _find_station_in_listing(station, listing)
         if fname:
             date = datetime.strptime(date_str, "%Y-%m-%d")
-            tasks.append((fname, _cddis_rinex_url_folder(date), station, date_str))
+            expected_hash = all_checksums.get(date_str, {}).get(fname)
+            tasks.append((fname, _cddis_rinex_url_folder(date), station, date_str, expected_hash))
         else:
             not_found += 1
 
@@ -852,11 +913,11 @@ def _download_rinex_from_cddis(
     cddis_ok = 0
     with ThreadPoolExecutor(max_workers=max_workers) as executor:
         futures = {
-            executor.submit(_cddis_download_worker, fname, url_folder, data_dir, station, date_str, username, password, if_file_present, work_root): (
+            executor.submit(_cddis_download_worker, fname, url_folder, data_dir, station, date_str, username, password, if_file_present, work_root, expected_hash): (
                 station,
                 date_str,
             )
-            for fname, url_folder, station, date_str in tasks
+            for fname, url_folder, station, date_str, expected_hash in tasks
         }
         for future in as_completed(futures):
             station, date_str, filepath = future.result()
@@ -970,9 +1031,9 @@ def download_rinex_obs(
                     logging.info(f"CDDIS: {len(missing_pairs)} station-days missing from GA")
                 missing_dates = sorted({d for _, d in missing_pairs})
                 cache_dir = (work_root if work_root else data_dir) / ".cddis_listings"
-                all_listings = _prefetch_cddis_listings(missing_dates, username, password, cache_dir, max_workers)
+                all_listings, all_checksums = _prefetch_cddis_metadata(missing_dates, username, password, cache_dir, max_workers)
                 cddis_provenance = _download_rinex_from_cddis(
-                    missing_pairs, all_listings, data_dir, username, password, max_workers, if_file_present, work_root
+                    missing_pairs, all_listings, all_checksums, data_dir, username, password, max_workers, if_file_present, work_root
                 )
                 provenance.extend(cddis_provenance)
 
